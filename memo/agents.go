@@ -16,14 +16,13 @@ type Agents struct {
 	mongo  *mongo.Collection
 	qdrant pb.CollectionsClient
 
-	ctx   context.Context
 	limit int64
 }
 
 // Add agent and return inserted id
 // if agent's id is not set, then it will create one
 // if agent's created time is not set, then it will use "time.now"
-func (s *Agents) AddAgent(agent *Agent) (primitive.ObjectID, error) {
+func (s *Agents) AddAgent(ctx context.Context, agent *Agent) (primitive.ObjectID, error) {
 	if agent.ID == primitive.NilObjectID {
 		agent.ID = primitive.NewObjectID()
 	}
@@ -32,12 +31,12 @@ func (s *Agents) AddAgent(agent *Agent) (primitive.ObjectID, error) {
 		agent.Created = time.Now()
 	}
 
-	_, err := s.mongo.InsertOne(s.ctx, agent)
+	_, err := s.mongo.InsertOne(ctx, agent)
 	if err != nil {
 		return primitive.NilObjectID, err
 	}
 
-	err = s.createQdrantCollection(agent.ID.Hex())
+	err = s.createQdrantCollection(ctx, agent.ID.Hex())
 	if err != nil {
 		return primitive.NilObjectID, err
 	}
@@ -45,8 +44,8 @@ func (s *Agents) AddAgent(agent *Agent) (primitive.ObjectID, error) {
 }
 
 // Delete agent, if no agent matched it will return an notfound error
-func (s Agents) DeleteAgent(id primitive.ObjectID) error {
-	res, err := s.mongo.DeleteOne(s.ctx, bson.M{"_id": id})
+func (s Agents) DeleteAgent(ctx context.Context, id primitive.ObjectID) error {
+	res, err := s.mongo.DeleteOne(ctx, bson.M{"_id": id})
 	if err != nil {
 		return err
 	}
@@ -55,12 +54,12 @@ func (s Agents) DeleteAgent(id primitive.ObjectID) error {
 		return fmt.Errorf("can't find the agent: %s", id)
 	}
 
-	return s.deleteQdrantCollection(id.Hex())
+	return s.deleteQdrantCollection(ctx, id.Hex())
 }
 
 // Update agent, if no agent matched it will return an notfound error
-func (s *Agents) UpdateAgent(agent *Agent) error {
-	res, err := s.mongo.UpdateByID(s.ctx, agent.ID, bson.M{"$set": agent})
+func (s *Agents) UpdateAgent(ctx context.Context, agent *Agent) error {
+	res, err := s.mongo.UpdateByID(ctx, agent.ID, bson.M{"$set": agent})
 	if err != nil {
 		return err
 	}
@@ -72,8 +71,8 @@ func (s *Agents) UpdateAgent(agent *Agent) error {
 }
 
 // GetAgent by id
-func (s *Agents) GetAgent(id primitive.ObjectID) (agent *Agent, err error) {
-	res := s.mongo.FindOne(s.ctx, bson.M{"_id": id})
+func (s *Agents) GetAgent(ctx context.Context, id primitive.ObjectID) (agent *Agent, err error) {
+	res := s.mongo.FindOne(ctx, bson.M{"_id": id})
 	err = res.Err()
 	if err != nil {
 		return
@@ -85,24 +84,24 @@ func (s *Agents) GetAgent(id primitive.ObjectID) (agent *Agent, err error) {
 }
 
 // List agents with offset, you can set search limit by session
-func (s *Agents) ListAgents(offset primitive.ObjectID) (agents []*Agent, err error) {
+func (s *Agents) ListAgents(ctx context.Context, offset primitive.ObjectID) (agents []*Agent, err error) {
 	opts := options.Find().SetSort(bson.M{"_id": -1}).SetLimit(s.limit)
 	var filter bson.M
 	// if offset is not nil, then make the offset filter
 	if offset != primitive.NilObjectID {
 		filter = bson.M{"_id": bson.M{"$lt": offset}}
 	}
-	cur, err := s.mongo.Find(s.ctx, filter, opts)
+	cur, err := s.mongo.Find(ctx, filter, opts)
 
 	if err != nil {
 		return
 	}
-	err = cur.All(s.ctx, &agents)
+	err = cur.All(ctx, &agents)
 	return
 }
 
-func (s Agents) createQdrantCollection(name string) (err error) {
-	_, err = s.qdrant.Create(s.ctx, &pb.CreateCollection{
+func (s Agents) createQdrantCollection(ctx context.Context, name string) (err error) {
+	_, err = s.qdrant.Create(ctx, &pb.CreateCollection{
 		CollectionName: name,
 		VectorsConfig: &pb.VectorsConfig{
 			Config: &pb.VectorsConfig_Params{
@@ -116,7 +115,7 @@ func (s Agents) createQdrantCollection(name string) (err error) {
 	return
 }
 
-func (s Agents) deleteQdrantCollection(name string) (err error) {
-	_, err = s.qdrant.Delete(s.ctx, &pb.DeleteCollection{CollectionName: name})
+func (s Agents) deleteQdrantCollection(ctx context.Context, name string) (err error) {
+	_, err = s.qdrant.Delete(ctx, &pb.DeleteCollection{CollectionName: name})
 	return
 }

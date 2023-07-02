@@ -38,15 +38,12 @@ func (ms *MemoriesSuite) SetupSuite() {
 	}
 
 	ms.agents = &Agents{
-		ctx:    ctx,
 		qdrant: pb.NewCollectionsClient(qc),
 		mongo:  mc.Database("test-db").Collection("agents"),
 		limit:  15,
 	}
 
-	ms.memories = &Memories{
-		ctx: ctx,
-	}
+	ms.memories = &Memories{}
 }
 
 func TestMemoriesSuite(t *testing.T) {

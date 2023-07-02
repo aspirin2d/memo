@@ -1,22 +1,25 @@
 package memo
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
+import (
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"golang.org/x/net/context"
+)
 
 type AgentModel interface {
 	// Add agent and return inserted id
-	AddAgent(agent *Agent) (primitive.ObjectID, error)
+	AddAgent(ctx context.Context, agent *Agent) (primitive.ObjectID, error)
 
 	// Delete agent by id
-	DeleteAgent(id primitive.ObjectID) error
+	DeleteAgent(ctx context.Context, id primitive.ObjectID) error
 
 	// Update agent
-	UpdateAgent(agent *Agent) error
+	UpdateAgent(ctx context.Context, agent *Agent) error
 
 	// ListAgents and offset agent's id
-	ListAgents(offset primitive.ObjectID) ([]*Agent, error)
+	ListAgents(ctx context.Context, offset primitive.ObjectID) ([]*Agent, error)
 
 	// GetAgent by id
-	GetAgent(id primitive.ObjectID) (*Agent, error)
+	GetAgent(ctx context.Context, id primitive.ObjectID) (*Agent, error)
 }
 
 type MemoryModel interface {

@@ -1,6 +1,7 @@
 package memo
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -8,26 +9,23 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"golang.org/x/net/context"
 )
 
 type Memories struct {
 	mongo  *mongo.Collection
 	qdrant pb.PointsClient
 	openai *openai.Client
-
-	ctx context.Context
 }
 
-func (ms *Memories) AddMemory(id primitive.ObjectID, memory *Memory) (primitive.ObjectID, error) {
-	res, err := ms.AddMemories(id, []*Memory{memory})
+func (ms *Memories) AddMemory(ctx context.Context, aid primitive.ObjectID, memory *Memory) (primitive.ObjectID, error) {
+	res, err := ms.AddMemories(ctx, aid, []*Memory{memory})
 	if err != nil {
 		return primitive.NilObjectID, err
 	}
 	return res[0], nil
 }
 
-func (ms *Memories) AddMemories(id primitive.ObjectID, memories []*Memory) ([]primitive.ObjectID, error) {
+func (ms *Memories) AddMemories(ctx context.Context, id primitive.ObjectID, memories []*Memory) ([]primitive.ObjectID, error) {
 	l := len(memories)
 	var docs []interface{} = make([]interface{}, l)
 	var mids []primitive.ObjectID = make([]primitive.ObjectID, l) // memory objectids
@@ -44,7 +42,7 @@ func (ms *Memories) AddMemories(id primitive.ObjectID, memories []*Memory) ([]pr
 		pid, _ := uuid.NewUUID()
 		pids[idx] = pid
 	}
-	res, err := ms.mongo.InsertMany(ms.ctx, docs)
+	res, err := ms.mongo.InsertMany(ctx, docs)
 	if err != nil {
 		return nil, err
 	}
@@ -54,13 +52,13 @@ func (ms *Memories) AddMemories(id primitive.ObjectID, memories []*Memory) ([]pr
 	}
 
 	// create embeddings
-	ems, err := ms.embedding(contents)
+	ems, err := ms.embedding(ctx, contents)
 	if err != nil {
 		return nil, err
 	}
 
 	// upsert points into qdrant
-	err = ms.upsertPoints(id, pids, mids, ems)
+	err = ms.upsertPoints(ctx, id, pids, mids, ems)
 	return mids, nil
 }
 
@@ -87,7 +85,7 @@ func (ms *Memories) DeleteMemories(ids []primitive.ObjectID) error {
 
 // }
 
-func (ag *Memories) embedding(contents []string) ([]openai.Embedding, error) {
+func (ag *Memories) embedding(ctx context.Context, contents []string) ([]openai.Embedding, error) {
 	// TODO: check the token limit
 	// create embeddings
 	req := openai.EmbeddingRequest{
@@ -95,7 +93,7 @@ func (ag *Memories) embedding(contents []string) ([]openai.Embedding, error) {
 		Model: openai.AdaEmbeddingV2,
 	}
 
-	res, err := ag.openai.CreateEmbeddings(ag.ctx, req)
+	res, err := ag.openai.CreateEmbeddings(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -103,10 +101,9 @@ func (ag *Memories) embedding(contents []string) ([]openai.Embedding, error) {
 	return res.Data, nil
 }
 
-func (ag *Memories) upsertPoints(id primitive.ObjectID, pids []uuid.UUID, mids []primitive.ObjectID, ems []openai.Embedding) error {
+func (ag *Memories) upsertPoints(ctx context.Context, id primitive.ObjectID, pids []uuid.UUID, mids []primitive.ObjectID, ems []openai.Embedding) error {
 	l := len(ems)
 	points := make([]*pb.PointStruct, l)
-
 	for _, em := range ems {
 		point := &pb.PointStruct{
 			Id:      &pb.PointId{PointIdOptions: &pb.PointId_Uuid{Uuid: pids[em.Index].String()}},
@@ -116,7 +113,7 @@ func (ag *Memories) upsertPoints(id primitive.ObjectID, pids []uuid.UUID, mids [
 		points[em.Index] = point
 	}
 	waitUpsert := true
-	_, err := ag.qdrant.Upsert(ag.ctx, &pb.UpsertPoints{
+	_, err := ag.qdrant.Upsert(ctx, &pb.UpsertPoints{
 		CollectionName: id.Hex(),
 		Wait:           &waitUpsert,
 		Points:         points,
