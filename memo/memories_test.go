@@ -60,14 +60,14 @@ func (ms *MemoriesSuite) SetupSuite() {
 func (ms *MemoriesSuite) SetupTest() {
 	ctx := context.TODO()
 	agent := &Agent{Name: "Aspirin"}
-	ms.agents.AddAgent(ctx, agent)
+	ms.agents.Add(ctx, agent)
 	ms.agent = agent
 }
 
 // delete the agent after each test
 func (ms *MemoriesSuite) TearDownTest() {
 	ctx := context.TODO()
-	err := ms.agents.DeleteAgent(ctx, ms.agent.ID)
+	err := ms.agents.Delete(ctx, ms.agent.ID)
 	ms.NoError(err)
 }
 

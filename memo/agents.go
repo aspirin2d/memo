@@ -24,7 +24,7 @@ type Agents struct {
 // Add agent and return inserted id
 // if agent's id is not set, then it will create one
 // if agent's created time is not set, then it will use "time.now"
-func (s *Agents) AddAgent(ctx context.Context, agent *Agent) (primitive.ObjectID, error) {
+func (s *Agents) Add(ctx context.Context, agent *Agent) (primitive.ObjectID, error) {
 	if agent.ID == primitive.NilObjectID {
 		agent.ID = primitive.NewObjectID()
 	}
@@ -47,7 +47,7 @@ func (s *Agents) AddAgent(ctx context.Context, agent *Agent) (primitive.ObjectID
 
 // Delete agent, if no agent matched it will return an notfound error
 // id is agent's id
-func (s Agents) DeleteAgent(ctx context.Context, id primitive.ObjectID) error {
+func (s Agents) Delete(ctx context.Context, id primitive.ObjectID) error {
 	res, err := s.mongo.DeleteOne(ctx, bson.M{"_id": id})
 	if err != nil {
 		return err
@@ -62,7 +62,7 @@ func (s Agents) DeleteAgent(ctx context.Context, id primitive.ObjectID) error {
 }
 
 // Update agent, if no agent matched it will return an notfound error
-func (s *Agents) UpdateAgent(ctx context.Context, agent *Agent) error {
+func (s *Agents) Update(ctx context.Context, agent *Agent) error {
 	res, err := s.mongo.UpdateByID(ctx, agent.ID, bson.M{"$set": agent})
 	if err != nil {
 		return err
@@ -75,8 +75,8 @@ func (s *Agents) UpdateAgent(ctx context.Context, agent *Agent) error {
 	return err
 }
 
-// GetAgent by id
-func (s *Agents) GetAgent(ctx context.Context, id primitive.ObjectID) (agent *Agent, err error) {
+// Get by id
+func (s *Agents) Get(ctx context.Context, id primitive.ObjectID) (agent *Agent, err error) {
 	res := s.mongo.FindOne(ctx, bson.M{"_id": id})
 	err = res.Err()
 	if err != nil {
@@ -89,7 +89,7 @@ func (s *Agents) GetAgent(ctx context.Context, id primitive.ObjectID) (agent *Ag
 }
 
 // List agents with offset, you can set search limit by session
-func (s *Agents) ListAgents(ctx context.Context, offset primitive.ObjectID) (agents []*Agent, err error) {
+func (s *Agents) List(ctx context.Context, offset primitive.ObjectID) (agents []*Agent, err error) {
 	opts := options.Find().SetSort(bson.M{"_id": -1}).SetLimit(s.limit)
 	var filter bson.M
 	// if offset is not nil, then make the offset filter
