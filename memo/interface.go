@@ -24,9 +24,9 @@ type AgentModel interface {
 
 type MemoryModel interface {
 	// Add memory and return inserted id
-	AddMemory(memory Memory) (string, error)
+	AddMemory(ctx context.Context, agent primitive.ObjectID, memory Memory) (string, error)
 	// Add memories and return inserted ids
-	AddMemories(memories []Memory) ([]string, error)
+	AddMemories(ctx context.Context, agent primitive.ObjectID, memories []Memory) ([]string, error)
 
 	// Update memory
 	UpdateMemory(memory Memory) error

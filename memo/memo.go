@@ -20,3 +20,7 @@ type Agent struct {
 	Name    string             `bson:"name" json:"name"`
 	Created time.Time          `bson:"created_at" json:"created_at"`
 }
+
+type Config struct {
+	OpenAIAPIKey string `toml:"openai_api_key"`
+}

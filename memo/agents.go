@@ -12,6 +12,8 @@ import (
 	"golang.org/x/net/context"
 )
 
+// Agents is  a model which implements AgentModel interface
+// it holds mongo collection and qdrant collection
 type Agents struct {
 	mongo  *mongo.Collection
 	qdrant pb.CollectionsClient
@@ -44,12 +46,14 @@ func (s *Agents) AddAgent(ctx context.Context, agent *Agent) (primitive.ObjectID
 }
 
 // Delete agent, if no agent matched it will return an notfound error
+// id is agent's id
 func (s Agents) DeleteAgent(ctx context.Context, id primitive.ObjectID) error {
 	res, err := s.mongo.DeleteOne(ctx, bson.M{"_id": id})
 	if err != nil {
 		return err
 	}
 
+	// check if agent exists
 	if res.DeletedCount == 0 {
 		return fmt.Errorf("can't find the agent: %s", id)
 	}
@@ -63,8 +67,9 @@ func (s *Agents) UpdateAgent(ctx context.Context, agent *Agent) error {
 	if err != nil {
 		return err
 	}
+	// if no agent matched
 	if res.MatchedCount == 0 {
-		return fmt.Errorf("can't find the agent: %s", agent.ID.Hex())
+		return fmt.Errorf("agent not found: %s", agent.ID.Hex())
 	}
 
 	return err
