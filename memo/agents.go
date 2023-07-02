@@ -12,17 +12,18 @@ import (
 	"golang.org/x/net/context"
 )
 
-type Session struct {
+type Agents struct {
 	mongo  *mongo.Collection
 	qdrant pb.CollectionsClient
-	ctx    context.Context
-	limit  int64
+
+	ctx   context.Context
+	limit int64
 }
 
 // Add agent and return inserted id
 // if agent's id is not set, then it will create one
 // if agent's created time is not set, then it will use "time.now"
-func (s *Session) AddAgent(agent *Agent) (primitive.ObjectID, error) {
+func (s *Agents) AddAgent(agent *Agent) (primitive.ObjectID, error) {
 	if agent.ID == primitive.NilObjectID {
 		agent.ID = primitive.NewObjectID()
 	}
@@ -44,7 +45,7 @@ func (s *Session) AddAgent(agent *Agent) (primitive.ObjectID, error) {
 }
 
 // Delete agent, if no agent matched it will return an notfound error
-func (s Session) DeleteAgent(id primitive.ObjectID) error {
+func (s Agents) DeleteAgent(id primitive.ObjectID) error {
 	res, err := s.mongo.DeleteOne(s.ctx, bson.M{"_id": id})
 	if err != nil {
 		return err
@@ -58,7 +59,7 @@ func (s Session) DeleteAgent(id primitive.ObjectID) error {
 }
 
 // Update agent, if no agent matched it will return an notfound error
-func (s *Session) UpdateAgent(agent *Agent) error {
+func (s *Agents) UpdateAgent(agent *Agent) error {
 	res, err := s.mongo.UpdateByID(s.ctx, agent.ID, bson.M{"$set": agent})
 	if err != nil {
 		return err
@@ -71,7 +72,7 @@ func (s *Session) UpdateAgent(agent *Agent) error {
 }
 
 // GetAgent by id
-func (s *Session) GetAgent(id primitive.ObjectID) (agent *Agent, err error) {
+func (s *Agents) GetAgent(id primitive.ObjectID) (agent *Agent, err error) {
 	res := s.mongo.FindOne(s.ctx, bson.M{"_id": id})
 	err = res.Err()
 	if err != nil {
@@ -84,7 +85,7 @@ func (s *Session) GetAgent(id primitive.ObjectID) (agent *Agent, err error) {
 }
 
 // List agents with offset, you can set search limit by session
-func (s *Session) ListAgents(offset primitive.ObjectID) (agents []*Agent, err error) {
+func (s *Agents) ListAgents(offset primitive.ObjectID) (agents []*Agent, err error) {
 	opts := options.Find().SetSort(bson.M{"_id": -1}).SetLimit(s.limit)
 	var filter bson.M
 	// if offset is not nil, then make the offset filter
@@ -100,7 +101,7 @@ func (s *Session) ListAgents(offset primitive.ObjectID) (agents []*Agent, err er
 	return
 }
 
-func (s Session) createQdrantCollection(name string) (err error) {
+func (s Agents) createQdrantCollection(name string) (err error) {
 	_, err = s.qdrant.Create(s.ctx, &pb.CreateCollection{
 		CollectionName: name,
 		VectorsConfig: &pb.VectorsConfig{
@@ -115,7 +116,7 @@ func (s Session) createQdrantCollection(name string) (err error) {
 	return
 }
 
-func (s Session) deleteQdrantCollection(name string) (err error) {
+func (s Agents) deleteQdrantCollection(name string) (err error) {
 	_, err = s.qdrant.Delete(s.ctx, &pb.DeleteCollection{CollectionName: name})
 	return
 }

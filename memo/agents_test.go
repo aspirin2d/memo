@@ -15,14 +15,14 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type SessionSuite struct {
+type AgentsSuite struct {
 	suite.Suite
-	session *Session
+	agents *Agents
 }
 
-func (s *SessionSuite) SetupSuite() {
-	// check session is implements AgentModel
-	var _ AgentModel = (*Session)(nil)
+func (s *AgentsSuite) SetupSuite() {
+	// check agents is implements AgentModel
+	var _ AgentModel = (*Agents)(nil)
 
 	ctx := context.TODO()
 	// mongodb
@@ -37,7 +37,7 @@ func (s *SessionSuite) SetupSuite() {
 		panic(err)
 	}
 
-	s.session = &Session{
+	s.agents = &Agents{
 		ctx:    ctx,
 		qdrant: pb.NewCollectionsClient(qc),
 		mongo:  mc.Database("test-db").Collection("agents"),
@@ -45,106 +45,106 @@ func (s *SessionSuite) SetupSuite() {
 	}
 }
 
-func (s *SessionSuite) TearDownTest() {
+func (s *AgentsSuite) TearDownTest() {
 	// drop agent collection when each test finished
-	err := s.session.mongo.Drop(s.session.ctx)
+	err := s.agents.mongo.Drop(s.agents.ctx)
 	s.NoError(err)
 }
-func (s *SessionSuite) TearDownSuite() {
+func (s *AgentsSuite) TearDownSuite() {
 	// delete all qdrant collections when all tests in this suite finished
-	res, err := s.session.qdrant.List(s.session.ctx, &pb.ListCollectionsRequest{})
+	res, err := s.agents.qdrant.List(s.agents.ctx, &pb.ListCollectionsRequest{})
 	s.NoError(err)
 	for _, col := range res.Collections {
-		_, err := s.session.qdrant.Delete(s.session.ctx, &pb.DeleteCollection{CollectionName: col.Name})
+		_, err := s.agents.qdrant.Delete(s.agents.ctx, &pb.DeleteCollection{CollectionName: col.Name})
 		s.NoError(err)
 	}
 }
 
-func (s *SessionSuite) TestAddAgent() {
-	id0, err := s.session.AddAgent(&Agent{Name: "aspirin"})
+func (s *AgentsSuite) TestAddAgent() {
+	id0, err := s.agents.AddAgent(&Agent{Name: "aspirin"})
 	s.NoError(err)
-	id1, err := s.session.AddAgent(&Agent{Name: "aspirin2d"})
+	id1, err := s.agents.AddAgent(&Agent{Name: "aspirin2d"})
 	s.NoError(err)
 
 	s.NotEqual(id0.Hex(), id1.Hex())
 
 	newID := primitive.NewObjectID()
-	id3, err := s.session.AddAgent(&Agent{ID: newID, Name: "aspirin2d"})
+	id3, err := s.agents.AddAgent(&Agent{ID: newID, Name: "aspirin2d"})
 	s.NoError(err)
 	s.Equal(newID.Hex(), id3.Hex())
 }
 
-func (s *SessionSuite) TestGetAgent() {
-	id, err := s.session.AddAgent(&Agent{Name: "aspirin"})
+func (s *AgentsSuite) TestGetAgent() {
+	id, err := s.agents.AddAgent(&Agent{Name: "aspirin"})
 	s.NoError(err)
-	agent, err := s.session.GetAgent(id)
+	agent, err := s.agents.GetAgent(id)
 	s.NoError(err)
 	s.Equal(agent.Name, "aspirin")
 	// it will create a new "created" value for the agent
 	s.True(agent.Created.After(time.Now().Add(-5 * time.Second)))
 
-	_, err = s.session.GetAgent(primitive.NewObjectID())
+	_, err = s.agents.GetAgent(primitive.NewObjectID())
 	s.Error(err)
 }
 
-func (s *SessionSuite) TestListAgents() {
+func (s *AgentsSuite) TestListAgents() {
 	for i := range [5]int{} {
-		_, err := s.session.AddAgent(&Agent{Name: fmt.Sprintf("aspirin %d", i)})
+		_, err := s.agents.AddAgent(&Agent{Name: fmt.Sprintf("aspirin %d", i)})
 		s.NoError(err)
 	}
-	agents, err := s.session.ListAgents(primitive.NilObjectID)
+	agents, err := s.agents.ListAgents(primitive.NilObjectID)
 	s.NoError(err)
 	s.Equal(5, len(agents))
 
 	for i := range [20]int{} {
-		_, err := s.session.AddAgent(&Agent{Name: fmt.Sprintf("aspirin %d", i)})
+		_, err := s.agents.AddAgent(&Agent{Name: fmt.Sprintf("aspirin %d", i)})
 		s.NoError(err)
 	}
 
-	agents, err = s.session.ListAgents(primitive.NilObjectID)
+	agents, err = s.agents.ListAgents(primitive.NilObjectID)
 	s.NoError(err)
 	// reached search limit
 	s.Equal(15, len(agents))
 
 	// search with the last agent as offset, it will get the rest of the agents
-	agents, err = s.session.ListAgents(agents[len(agents)-1].ID)
+	agents, err = s.agents.ListAgents(agents[len(agents)-1].ID)
 	s.NoError(err)
 	s.Equal(10, len(agents))
 }
 
-func (s *SessionSuite) TestDeleteAgent() {
+func (s *AgentsSuite) TestDeleteAgent() {
 	for i := range [5]int{} {
-		_, err := s.session.AddAgent(&Agent{Name: fmt.Sprintf("aspirin %d", i)})
+		_, err := s.agents.AddAgent(&Agent{Name: fmt.Sprintf("aspirin %d", i)})
 		s.NoError(err)
 	}
 
-	agents, err := s.session.ListAgents(primitive.NilObjectID)
+	agents, err := s.agents.ListAgents(primitive.NilObjectID)
 	s.NoError(err)
 	s.Equal(5, len(agents))
 
-	s.session.DeleteAgent(agents[len(agents)-1].ID)
-	agents, err = s.session.ListAgents(primitive.NilObjectID)
+	s.agents.DeleteAgent(agents[len(agents)-1].ID)
+	agents, err = s.agents.ListAgents(primitive.NilObjectID)
 	s.NoError(err)
 	s.Equal(4, len(agents))
 
-	err = s.session.DeleteAgent(primitive.NewObjectID())
+	err = s.agents.DeleteAgent(primitive.NewObjectID())
 	s.Error(err)
 }
 
-func (s *SessionSuite) TestUpdateAgent() {
-	id, err := s.session.AddAgent(&Agent{Name: "aspirin2d"})
+func (s *AgentsSuite) TestUpdateAgent() {
+	id, err := s.agents.AddAgent(&Agent{Name: "aspirin2d"})
 	s.NoError(err)
-	err = s.session.UpdateAgent(&Agent{ID: id, Name: "aspirin3d"})
+	err = s.agents.UpdateAgent(&Agent{ID: id, Name: "aspirin3d"})
 	s.NoError(err)
-	agent, err := s.session.GetAgent(id)
+	agent, err := s.agents.GetAgent(id)
 	s.NoError(err)
 	s.Equal("aspirin3d", agent.Name)
 
 	// try to update a not existed agent will cause error
-	err = s.session.UpdateAgent(&Agent{ID: primitive.NewObjectID(), Name: "aspirin3d"})
+	err = s.agents.UpdateAgent(&Agent{ID: primitive.NewObjectID(), Name: "aspirin3d"})
 	s.Error(err)
 }
 
-func TestSessionSuite(t *testing.T) {
-	suite.Run(t, new(SessionSuite))
+func TestAgentsSuite(t *testing.T) {
+	suite.Run(t, new(AgentsSuite))
 }

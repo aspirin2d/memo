@@ -1,31 +1,17 @@
 package memo
 
 import (
-	"context"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	pb "github.com/qdrant/go-client/qdrant"
 	openai "github.com/sashabaranov/go-openai"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/net/context"
 )
 
-type vector []float32
-
-type Memory struct {
-	ID      primitive.ObjectID `bson:"_id" json:"id"`
-	Content string             `bson:"content" json:"content"`
-	PID     string             `bson:"pid" json:"pid"`
-	Created time.Time          `bson:"created_at" json:"created_at"`
-}
-
-type Agent struct {
-	ID      primitive.ObjectID `bson:"_id" json:"id"`
-	Name    string             `bson:"name" json:"name"`
-	Created time.Time          `bson:"created_at" json:"created_at"`
-
+type Memories struct {
 	mongo  *mongo.Collection
 	qdrant pb.PointsClient
 	openai *openai.Client
@@ -33,15 +19,15 @@ type Agent struct {
 	ctx context.Context
 }
 
-func (ag *Agent) AddMemory(memory *Memory) (primitive.ObjectID, error) {
-	res, err := ag.AddMemories([]*Memory{memory})
+func (ms *Memories) AddMemory(id primitive.ObjectID, memory *Memory) (primitive.ObjectID, error) {
+	res, err := ms.AddMemories(id, []*Memory{memory})
 	if err != nil {
 		return primitive.NilObjectID, err
 	}
 	return res[0], nil
 }
 
-func (ag *Agent) AddMemories(memories []*Memory) ([]primitive.ObjectID, error) {
+func (ms *Memories) AddMemories(id primitive.ObjectID, memories []*Memory) ([]primitive.ObjectID, error) {
 	l := len(memories)
 	var docs []interface{} = make([]interface{}, l)
 	var mids []primitive.ObjectID = make([]primitive.ObjectID, l) // memory objectids
@@ -58,7 +44,7 @@ func (ag *Agent) AddMemories(memories []*Memory) ([]primitive.ObjectID, error) {
 		pid, _ := uuid.NewUUID()
 		pids[idx] = pid
 	}
-	res, err := ag.mongo.InsertMany(ag.ctx, docs)
+	res, err := ms.mongo.InsertMany(ms.ctx, docs)
 	if err != nil {
 		return nil, err
 	}
@@ -68,27 +54,28 @@ func (ag *Agent) AddMemories(memories []*Memory) ([]primitive.ObjectID, error) {
 	}
 
 	// create embeddings
-	ems, err := ag.embedding(contents)
+	ems, err := ms.embedding(contents)
 	if err != nil {
 		return nil, err
 	}
 
 	// upsert points into qdrant
-	err = ag.upsertPoints(pids, mids, ems)
+	err = ms.upsertPoints(id, pids, mids, ems)
 	return mids, nil
+}
+
+func (ms *Memories) DeleteMemory(id primitive.ObjectID) error {
+	return nil
+}
+
+func (ms *Memories) DeleteMemories(ids []primitive.ObjectID) error {
+	return nil
 }
 
 // func (ag *Agent) UpdateMemory(memory Memory) error {
 
 // }
 // func (ag *Agent) UpdateMemories(memories []Memory) error {
-
-// }
-
-// func (ag *Agent) DeleteMemory(id primitive.ObjectID) error {
-
-// }
-// func (ag *Agent) DeleteMemories(ids []primitive.ObjectID) error {
 
 // }
 
@@ -100,7 +87,7 @@ func (ag *Agent) AddMemories(memories []*Memory) ([]primitive.ObjectID, error) {
 
 // }
 
-func (ag *Agent) embedding(contents []string) ([]openai.Embedding, error) {
+func (ag *Memories) embedding(contents []string) ([]openai.Embedding, error) {
 	// TODO: check the token limit
 	// create embeddings
 	req := openai.EmbeddingRequest{
@@ -116,7 +103,7 @@ func (ag *Agent) embedding(contents []string) ([]openai.Embedding, error) {
 	return res.Data, nil
 }
 
-func (ag *Agent) upsertPoints(pids []uuid.UUID, mids []primitive.ObjectID, ems []openai.Embedding) error {
+func (ag *Memories) upsertPoints(id primitive.ObjectID, pids []uuid.UUID, mids []primitive.ObjectID, ems []openai.Embedding) error {
 	l := len(ems)
 	points := make([]*pb.PointStruct, l)
 
@@ -130,7 +117,7 @@ func (ag *Agent) upsertPoints(pids []uuid.UUID, mids []primitive.ObjectID, ems [
 	}
 	waitUpsert := true
 	_, err := ag.qdrant.Upsert(ag.ctx, &pb.UpsertPoints{
-		CollectionName: ag.ID.Hex(),
+		CollectionName: id.Hex(),
 		Wait:           &waitUpsert,
 		Points:         points,
 	})
