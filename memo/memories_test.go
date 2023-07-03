@@ -54,7 +54,7 @@ func (ms *MemoriesSuite) SetupSuite() {
 		mongo:  mc.Database("test-db").Collection("memories"),
 		openai: openai.NewClient(config.OpenAIAPIKey),
 
-		Limit: 3, // search limit
+		SearchLimit: 3, // search limit
 	}
 }
 
@@ -170,11 +170,31 @@ func (ms *MemoriesSuite) TestSearchMemories() {
 	ms.NoError(err)
 	ms.Equal(len(ids), len(memories))
 
-	mems, err := ms.memories.Search(ctx, ms.agent.ID, "naughty dog")
+	mems, err := ms.memories.Search(ctx, ms.agent.ID, "naughty dog") // just for fun
 	ms.NoError(err)
 	ms.Equal(3, len(mems))
 
-	ms.Contains(mems[0].Content, "video game")
+	ms.Contains(mems[0].Content, "Last of Us")
+}
+
+func (ms *MemoriesSuite) TestUpdateMemory() {
+	ctx := context.TODO()
+	var memory1 = Memory{
+		Content: "Hey, I am Aspirin",
+	}
+
+	id, err := ms.memories.AddOne(ctx, ms.agent.ID, &memory1)
+	ms.NoError(err)
+
+	memory1.Content = "Hey, I am Aspirin2D"
+
+	err = ms.memories.UpdateOne(ctx, &memory1)
+	ms.NoError(err)
+
+	mem, err := ms.memories.GetOne(ctx, id)
+	ms.NoError(err)
+
+	ms.Equal("Hey, I am Aspirin2D", mem.Content)
 }
 
 func TestMemoriesSuite(t *testing.T) {

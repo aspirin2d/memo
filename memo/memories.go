@@ -21,7 +21,8 @@ type Memories struct {
 	qdrant pb.PointsClient
 	openai *openai.Client
 
-	Limit uint64
+	SearchLimit int64
+	ListLimit   int64
 }
 
 // AddOne adds a memory to the agent
@@ -168,13 +169,30 @@ func (ms *Memories) DeleteMany(ctx context.Context, ids []primitive.ObjectID) er
 	return ms.deletePoints(ctx, aid, pids)
 }
 
-// func (ag *Agent) UpdateMemory(ctx context.Context, memory *Memory) error {
-// 	return nil
-// }
+func (ms *Memories) UpdateOne(ctx context.Context, memory *Memory) error {
+	res, err := ms.mongo.UpdateOne(ctx, bson.M{"_id": memory.ID}, bson.M{"$set": bson.M{"content": memory.Content}})
+	if err != nil {
+		return err
+	}
 
-// func (ag *Agent) UpdateMemories(memories []Memory) error {
+	// if no memory is modified, then return directly
+	if res.ModifiedCount == 0 {
+		return nil
+	}
 
-// }
+	// generate embedding for new content
+	ems, err := ms.embedding(ctx, []string{memory.Content})
+	if err != nil {
+		return err
+	}
+
+	pid, err := uuid.Parse(memory.PID)
+	if err != nil {
+		return err
+	}
+
+	return ms.upsertPoints(ctx, memory.AID, []uuid.UUID{pid}, []primitive.ObjectID{memory.ID}, ems)
+}
 
 // func (ag *Agent) ListMemories(offset primitive.ObjectID) ([]Memory, error) {
 
@@ -192,7 +210,7 @@ func (ms *Memories) Search(ctx context.Context, aid primitive.ObjectID, query st
 		Vector:         ems[0].Embedding,
 		WithPayload:    &pb.WithPayloadSelector{SelectorOptions: &pb.WithPayloadSelector_Enable{Enable: true}},  // with payload
 		WithVectors:    &pb.WithVectorsSelector{SelectorOptions: &pb.WithVectorsSelector_Enable{Enable: false}}, // without vectors
-		Limit:          ms.Limit,
+		Limit:          uint64(ms.SearchLimit),
 	})
 	if err != nil {
 		return nil, err
