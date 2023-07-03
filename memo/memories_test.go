@@ -170,9 +170,10 @@ func (ms *MemoriesSuite) TestSearchMemories() {
 	ms.NoError(err)
 	ms.Equal(len(ids), len(memories))
 
-	mems, err := ms.memories.Search(ctx, ms.agent.ID, "naughty dog") // just for fun
+	mems, scores, err := ms.memories.Search(ctx, ms.agent.ID, "naughty dog") // just for fun
 	ms.NoError(err)
-	ms.Equal(3, len(mems))
+	ms.Len(3, len(mems))
+	ms.Len(3, len(scores))
 
 	ms.Contains(mems[0].Content, "Last of Us")
 }

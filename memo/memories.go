@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // Memories is a model which implements MemoryModel interface
@@ -169,6 +170,7 @@ func (ms *Memories) DeleteMany(ctx context.Context, ids []primitive.ObjectID) er
 	return ms.deletePoints(ctx, aid, pids)
 }
 
+// update memory content and its embedding
 func (ms *Memories) UpdateOne(ctx context.Context, memory *Memory) error {
 	res, err := ms.mongo.UpdateOne(ctx, bson.M{"_id": memory.ID}, bson.M{"$set": bson.M{"content": memory.Content}})
 	if err != nil {
@@ -194,16 +196,29 @@ func (ms *Memories) UpdateOne(ctx context.Context, memory *Memory) error {
 	return ms.upsertPoints(ctx, memory.AID, []uuid.UUID{pid}, []primitive.ObjectID{memory.ID}, ems)
 }
 
-// func (ag *Agent) ListMemories(offset primitive.ObjectID) ([]Memory, error) {
+func (ms *Memories) List(ctx context.Context, aid primitive.ObjectID, offset primitive.ObjectID) ([]*Memory, error) {
+	filter := bson.M{"aid": aid}
+	if offset != primitive.NilObjectID {
+		filter["_id"] = bson.M{"$lt": offset}
+	}
 
-// }
+	opts := options.Find().SetSort(bson.M{"_id": -1}).SetLimit(ms.ListLimit)
+	cursor, err := ms.mongo.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var memories []*Memory
+	err = cursor.All(ctx, &memories)
+	return memories, err
+}
 
 // Search searches memories by query
 // id is aeget's id
-func (ms *Memories) Search(ctx context.Context, aid primitive.ObjectID, query string) ([]*Memory, error) {
+func (ms *Memories) Search(ctx context.Context, aid primitive.ObjectID, query string) ([]*Memory, []float32, error) {
 	ems, err := ms.embedding(ctx, []string{query})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	res, err := ms.qdrant.Search(ctx, &pb.SearchPoints{
 		CollectionName: aid.Hex(),
@@ -213,12 +228,12 @@ func (ms *Memories) Search(ctx context.Context, aid primitive.ObjectID, query st
 		Limit:          uint64(ms.SearchLimit),
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// check if any memory found
 	if len(res.Result) == 0 {
-		return nil, fmt.Errorf("no memories found")
+		return nil, nil, fmt.Errorf("no memories found")
 	}
 
 	// get memory ids
@@ -228,9 +243,9 @@ func (ms *Memories) Search(ctx context.Context, aid primitive.ObjectID, query st
 	for idx, p := range res.Result {
 		mid := p.GetPayload()["mid"].GetStringValue() // unix timestamp
 		mids[idx], err = primitive.ObjectIDFromHex(mid)
-		scores[idx] = p.Score
+		scores[idx] = p.Score // set score
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		// log.Printf("memory: %v, score: %v", mid, p.Score)
 	}
@@ -238,18 +253,18 @@ func (ms *Memories) Search(ctx context.Context, aid primitive.ObjectID, query st
 	// find them in mongodb
 	mres, err := ms.mongo.Find(ctx, bson.M{"_id": bson.M{"$in": mids}})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var memories []*Memory
 	err = mres.All(ctx, &memories)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// check if all memories found
 	if len(mids) != len(memories) {
-		return nil, fmt.Errorf("some memories not found: \n%v", mids)
+		return nil, nil, fmt.Errorf("some memories not found: \n%v", mids)
 	}
 
 	// sort by score
@@ -264,7 +279,7 @@ func (ms *Memories) Search(ctx context.Context, aid primitive.ObjectID, query st
 		}
 	}
 
-	return sorted, nil
+	return sorted, scores, nil
 }
 
 func (ag *Memories) embedding(ctx context.Context, contents []string) ([]openai.Embedding, error) {

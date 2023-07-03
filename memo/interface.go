@@ -31,17 +31,19 @@ type MemoryModel interface {
 	// Update memory
 	UpdateOne(ctx context.Context, memory *Memory) error
 	// Update memories
-	UpdateMany(ctx context.Context, memories []*Memory) error
+	// UpdateMany(ctx context.Context, memories []*Memory) error
 
 	// Delete memory by id
 	DeleteOne(ctx context.Context, id primitive.ObjectID) error
 	// Delete memories by ids
-	DeleteMany(ids []primitive.ObjectID) error
+	DeleteMany(ctx context.Context, ids []primitive.ObjectID) error
 
 	// ListMemories and offset memory's id
+	// aid is agent's id which memories belong to
 	// offset is the last memory's id
-	List(ctx context.Context, offset primitive.ObjectID) ([]*Memory, error)
+	List(ctx context.Context, aid primitive.ObjectID, offset primitive.ObjectID) ([]*Memory, error)
 
-	// Search related memories by query string,
-	Search(ctx context.Context, query string, limit string) ([]*Memory, error)
+	// Search with query string, and return related memories and scores
+	// aid is agent's id which memories belong to
+	Search(ctx context.Context, aid primitive.ObjectID, query string) ([]*Memory, []float32, error)
 }
