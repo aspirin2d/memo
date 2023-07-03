@@ -38,9 +38,9 @@ func (s *AgentsSuite) SetupSuite() {
 	}
 
 	s.agents = &Agents{
-		qdrant: pb.NewCollectionsClient(qc),
-		mongo:  mc.Database("test-db").Collection("agents"),
-		limit:  15,
+		qdrant:    pb.NewCollectionsClient(qc),
+		mongo:     mc.Database("test-db").Collection("agents"),
+		ListLimit: 15,
 	}
 }
 

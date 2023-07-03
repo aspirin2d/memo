@@ -40,9 +40,9 @@ func (ms *MemoriesSuite) SetupSuite() {
 	}
 
 	ms.agents = &Agents{
-		qdrant: pb.NewCollectionsClient(qc),
-		mongo:  mc.Database("test-db").Collection("agents"),
-		limit:  15,
+		qdrant:    pb.NewCollectionsClient(qc),
+		mongo:     mc.Database("test-db").Collection("agents"),
+		ListLimit: 15,
 	}
 	var config Config
 	_, err = toml.DecodeFile("../.config.toml", &config)

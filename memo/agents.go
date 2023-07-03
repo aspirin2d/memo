@@ -18,7 +18,7 @@ type Agents struct {
 	mongo  *mongo.Collection
 	qdrant pb.CollectionsClient
 
-	limit int64
+	ListLimit int64
 }
 
 // Add agent and return inserted id
@@ -90,7 +90,7 @@ func (s *Agents) Get(ctx context.Context, id primitive.ObjectID) (agent *Agent, 
 
 // List agents with offset, you can set search limit by session
 func (s *Agents) List(ctx context.Context, offset primitive.ObjectID) (agents []*Agent, err error) {
-	opts := options.Find().SetSort(bson.M{"_id": -1}).SetLimit(s.limit)
+	opts := options.Find().SetSort(bson.M{"_id": -1}).SetLimit(s.ListLimit)
 	var filter bson.M
 	// if offset is not nil, then make the offset filter
 	if offset != primitive.NilObjectID {
