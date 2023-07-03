@@ -7,6 +7,7 @@ import (
 	pb "github.com/qdrant/go-client/qdrant"
 	"github.com/sashabaranov/go-openai"
 	"github.com/stretchr/testify/suite"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/net/context"
@@ -142,9 +143,12 @@ func (ms *MemoriesSuite) TestAddMemories() {
 	err = ms.memories.DeleteMany(ctx, ids[:2])
 	ms.NoError(err)
 
-	agent, err := ms.memories.GetOne(ctx, ids[0])
+	mem, err := ms.memories.GetOne(ctx, ids[0])
 	ms.ErrorIs(err, mongo.ErrNoDocuments)
-	ms.Nil(agent)
+	ms.Nil(mem)
+
+	mems, err := ms.memories.GetMany(ctx, ids[2:])
+	ms.Len(mems, 3)
 }
 func (ms *MemoriesSuite) TestSearchMemories() {
 	ctx := context.TODO()
@@ -172,8 +176,8 @@ func (ms *MemoriesSuite) TestSearchMemories() {
 
 	mems, scores, err := ms.memories.Search(ctx, ms.agent.ID, "naughty dog") // just for fun
 	ms.NoError(err)
-	ms.Len(3, len(mems))
-	ms.Len(3, len(scores))
+	ms.Len(mems, 3)
+	ms.Len(scores, 3)
 
 	ms.Contains(mems[0].Content, "Last of Us")
 }
@@ -196,6 +200,40 @@ func (ms *MemoriesSuite) TestUpdateMemory() {
 	ms.NoError(err)
 
 	ms.Equal("Hey, I am Aspirin2D", mem.Content)
+}
+
+func (ms *MemoriesSuite) TestListMemories() {
+	ctx := context.TODO()
+	var memories = []*Memory{
+		{
+			Content: "Hey, I am Aspirin.",
+		},
+		{
+			Content: "My father is a teacher.",
+		},
+		{
+			Content: "My favorite color is red.",
+		},
+		{
+			Content: "My favorite food is pizza.",
+		},
+		{
+			Content: "My favorite video game is Last of Us.",
+		},
+	}
+
+	ids, err := ms.memories.AddMany(ctx, ms.agent.ID, memories)
+	ms.NoError(err)
+	ms.Equal(len(ids), len(memories))
+
+	ms.memories.ListLimit = 3 // set 3 per page
+	mems, err := ms.memories.List(ctx, ms.agent.ID, primitive.NilObjectID)
+	ms.NoError(err)
+	ms.Len(mems, 3)
+
+	mems, err = ms.memories.List(ctx, ms.agent.ID, mems[2].ID)
+	ms.NoError(err)
+	ms.Len(mems, 2)
 }
 
 func TestMemoriesSuite(t *testing.T) {

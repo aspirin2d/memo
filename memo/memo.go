@@ -66,6 +66,7 @@ func FromConfig(config_path string) *Memo {
 		MemoryListLimit:   15,
 		MemorySearchLimit: 5, // top_k
 	}
+
 	toml.DecodeFile(config_path, &conf)
 	if conf.OpenAIAPIKey == "" {
 		panic("OpenAIAPIKey is empty")
