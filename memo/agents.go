@@ -61,7 +61,7 @@ func (s Agents) Delete(ctx context.Context, id primitive.ObjectID) error {
 	return s.deleteQdrantCollection(ctx, id.Hex())
 }
 
-// Update agent, if no agent matched it will return an notfound error
+// Update an agent, if no agent matched it will return an notfound error
 func (s *Agents) Update(ctx context.Context, agent *Agent) error {
 	res, err := s.mongo.UpdateByID(ctx, agent.ID, bson.M{"$set": agent})
 	if err != nil {
@@ -75,7 +75,7 @@ func (s *Agents) Update(ctx context.Context, agent *Agent) error {
 	return err
 }
 
-// Get by id
+// Get agent by id
 func (s *Agents) Get(ctx context.Context, id primitive.ObjectID) (agent *Agent, err error) {
 	res := s.mongo.FindOne(ctx, bson.M{"_id": id})
 	err = res.Err()
@@ -117,6 +117,7 @@ func (s Agents) createQdrantCollection(ctx context.Context, name string) (err er
 			},
 		},
 	})
+	// log.Printf("collection created: %v, error: %v", name, err)
 	return
 }
 

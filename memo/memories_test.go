@@ -73,25 +73,44 @@ func (ms *MemoriesSuite) TearDownTest() {
 
 func (ms *MemoriesSuite) TestAddMemory() {
 	ctx := context.TODO()
-	var memory = Memory{
+	var memory1 = Memory{
 		Content: "Hey, I am Aspirin",
 	}
 
-	id, err := ms.memories.AddMemory(ctx, ms.agent.ID, &memory)
+	id, err := ms.memories.AddOne(ctx, ms.agent.ID, &memory1)
 	ms.NoError(err)
 
-	ag, err := ms.memories.GetMemory(ctx, id)
+	var memory2 = Memory{
+		Content: "Hey, I am Aspirin2D",
+	}
+
+	id, err = ms.memories.AddOne(ctx, ms.agent.ID, &memory2)
 	ms.NoError(err)
+
+	mem, err := ms.memories.GetOne(ctx, id)
+	ms.NoError(err)
+
+	pid := mem.PID
+	aid := mem.AID
 
 	// check the memory is added
-	ms.Equal(id.Hex(), ag.ID.Hex())
+	ms.Equal(id.Hex(), mem.ID.Hex())
 
-	err = ms.memories.DeleteMemory(ctx, id)
+	err = ms.memories.DeleteOne(ctx, id)
 	ms.NoError(err)
 
-	agent, err := ms.memories.GetMemory(ctx, id)
+	mem, err = ms.memories.GetOne(ctx, id)
 	ms.ErrorIs(err, mongo.ErrNoDocuments)
-	ms.Nil(agent)
+	ms.Nil(mem)
+
+	// check the memory's point is also delete
+	res, err := ms.memories.qdrant.Get(ctx, &pb.GetPoints{
+		CollectionName: aid.Hex(),
+		Ids: []*pb.PointId{
+			{PointIdOptions: &pb.PointId_Uuid{Uuid: pid}},
+		}})
+	ms.NoError(err)
+	ms.Equal(0, len(res.Result))
 }
 
 func (ms *MemoriesSuite) TestAddMemories() {
@@ -114,14 +133,14 @@ func (ms *MemoriesSuite) TestAddMemories() {
 		},
 	}
 
-	ids, err := ms.memories.AddMemories(ctx, ms.agent.ID, memories)
+	ids, err := ms.memories.AddMany(ctx, ms.agent.ID, memories)
 	ms.NoError(err)
 
 	// delete the first two memories
-	err = ms.memories.DeleteMemories(ctx, ids[:2])
+	err = ms.memories.DeleteMany(ctx, ids[:2])
 	ms.NoError(err)
 
-	agent, err := ms.memories.GetMemory(ctx, ids[0])
+	agent, err := ms.memories.GetOne(ctx, ids[0])
 	ms.ErrorIs(err, mongo.ErrNoDocuments)
 	ms.Nil(agent)
 }

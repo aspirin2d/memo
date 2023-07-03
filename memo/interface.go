@@ -18,7 +18,7 @@ type AgentModel interface {
 	// List and offset agent's id
 	List(ctx context.Context, offset primitive.ObjectID) ([]*Agent, error)
 
-	// Get by id
+	// Get agent by id
 	Get(ctx context.Context, id primitive.ObjectID) (*Agent, error)
 }
 
