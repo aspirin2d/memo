@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -48,6 +49,8 @@ type Memo struct {
 
 	Agents   AgentModel  // agents model
 	Memories MemoryModel // memories model
+
+	logger *zap.SugaredLogger
 }
 
 // NewAgents creates the default Agents which implements the AgentModel interface.
@@ -84,6 +87,10 @@ func FromConfig(config_path string) *Memo {
 		panic(err)
 	}
 
+	// logger
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+
 	return &Memo{
 		Agents: &Agents{
 			mongo:     mc.Database(conf.MongoDb).Collection(AGENTS_COLLECTION),
@@ -96,5 +103,7 @@ func FromConfig(config_path string) *Memo {
 			SearchLimit: int64(conf.MemorySearchLimit),
 			ListLimit:   int64(conf.MemoryListLimit),
 		},
+
+		logger: logger.Sugar(),
 	}
 }
