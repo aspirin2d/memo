@@ -20,6 +20,8 @@ type Memories struct {
 	mongo  *mongo.Collection
 	qdrant pb.PointsClient
 	openai *openai.Client
+
+	Limit uint64
 }
 
 // AddOne adds a memory to the agent
@@ -151,7 +153,11 @@ func (ms *Memories) DeleteMany(ctx context.Context, ids []primitive.ObjectID) er
 
 	// get point ids
 	var pids []uuid.UUID = make([]uuid.UUID, len(mems))
+	var aid = mems[0].AID
 	for idx, m := range mems {
+		if m.AID.Hex() != aid.Hex() {
+			return fmt.Errorf("memories not belong to the same agent")
+		}
 		pids[idx], err = uuid.Parse(m.PID)
 		if err != nil {
 			return err
@@ -159,12 +165,13 @@ func (ms *Memories) DeleteMany(ctx context.Context, ids []primitive.ObjectID) er
 	}
 
 	// finally delete memories' points from qdrant
-	return ms.deletePoints(ctx, mems[0].AID, pids)
+	return ms.deletePoints(ctx, aid, pids)
 }
 
-// func (ag *Agent) UpdateMemory(memory Memory) error {
-
+// func (ag *Agent) UpdateMemory(ctx context.Context, memory *Memory) error {
+// 	return nil
 // }
+
 // func (ag *Agent) UpdateMemories(memories []Memory) error {
 
 // }
@@ -175,44 +182,71 @@ func (ms *Memories) DeleteMany(ctx context.Context, ids []primitive.ObjectID) er
 
 // Search searches memories by query
 // id is aeget's id
-func (ms *Memories) Search(ctx context.Context, id primitive.ObjectID, query string, limit string) ([]*Memory, error) {
+func (ms *Memories) Search(ctx context.Context, aid primitive.ObjectID, query string) ([]*Memory, error) {
 	ems, err := ms.embedding(ctx, []string{query})
 	if err != nil {
 		return nil, err
 	}
 	res, err := ms.qdrant.Search(ctx, &pb.SearchPoints{
-		CollectionName: id.Hex(),
+		CollectionName: aid.Hex(),
 		Vector:         ems[0].Embedding,
 		WithPayload:    &pb.WithPayloadSelector{SelectorOptions: &pb.WithPayloadSelector_Enable{Enable: true}},  // with payload
 		WithVectors:    &pb.WithVectorsSelector{SelectorOptions: &pb.WithVectorsSelector_Enable{Enable: false}}, // without vectors
+		Limit:          ms.Limit,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	var mids []primitive.ObjectID
+	// check if any memory found
+	if len(res.Result) == 0 {
+		return nil, fmt.Errorf("no memories found")
+	}
+
+	// get memory ids
+	var mids []primitive.ObjectID = make([]primitive.ObjectID, len(res.Result))
+	var scores []float32 = make([]float32, len(res.Result))
+
 	for idx, p := range res.Result {
 		mid := p.GetPayload()["mid"].GetStringValue() // unix timestamp
 		mids[idx], err = primitive.ObjectIDFromHex(mid)
+		scores[idx] = p.Score
 		if err != nil {
 			return nil, err
 		}
+		// log.Printf("memory: %v, score: %v", mid, p.Score)
 	}
 
+	// find them in mongodb
 	mres, err := ms.mongo.Find(ctx, bson.M{"_id": bson.M{"$in": mids}})
 	if err != nil {
 		return nil, err
 	}
+
 	var memories []*Memory
 	err = mres.All(ctx, &memories)
 	if err != nil {
 		return nil, err
 	}
+
+	// check if all memories found
 	if len(mids) != len(memories) {
 		return nil, fmt.Errorf("some memories not found: \n%v", mids)
 	}
 
-	return memories, nil
+	// sort by score
+	var sorted []*Memory = make([]*Memory, len(memories))
+	for _, m := range memories {
+		for j, s := range mids {
+			if s.Hex() == m.ID.Hex() {
+				sorted[j] = m
+				// log.Println("sorted: ", j, m.ID.Hex(), m.Content)
+				break
+			}
+		}
+	}
+
+	return sorted, nil
 }
 
 func (ag *Memories) embedding(ctx context.Context, contents []string) ([]openai.Embedding, error) {

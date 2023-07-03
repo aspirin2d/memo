@@ -45,7 +45,7 @@ func (ms *MemoriesSuite) SetupSuite() {
 		limit:  15,
 	}
 	var config Config
-	_, err = toml.DecodeFile("../config.toml", &config)
+	_, err = toml.DecodeFile("../.config.toml", &config)
 	if err != nil {
 		panic(err)
 	}
@@ -53,6 +53,8 @@ func (ms *MemoriesSuite) SetupSuite() {
 		qdrant: pb.NewPointsClient(qc),
 		mongo:  mc.Database("test-db").Collection("memories"),
 		openai: openai.NewClient(config.OpenAIAPIKey),
+
+		Limit: 3, // search limit
 	}
 }
 
@@ -143,6 +145,36 @@ func (ms *MemoriesSuite) TestAddMemories() {
 	agent, err := ms.memories.GetOne(ctx, ids[0])
 	ms.ErrorIs(err, mongo.ErrNoDocuments)
 	ms.Nil(agent)
+}
+func (ms *MemoriesSuite) TestSearchMemories() {
+	ctx := context.TODO()
+	var memories = []*Memory{
+		{
+			Content: "Hey, I am Aspirin.",
+		},
+		{
+			Content: "My father is a teacher.",
+		},
+		{
+			Content: "My favorite color is red.",
+		},
+		{
+			Content: "My favorite food is pizza.",
+		},
+		{
+			Content: "My favorite video game is Last of Us.",
+		},
+	}
+
+	ids, err := ms.memories.AddMany(ctx, ms.agent.ID, memories)
+	ms.NoError(err)
+	ms.Equal(len(ids), len(memories))
+
+	mems, err := ms.memories.Search(ctx, ms.agent.ID, "naughty dog")
+	ms.NoError(err)
+	ms.Equal(3, len(mems))
+
+	ms.Contains(mems[0].Content, "video game")
 }
 
 func TestMemoriesSuite(t *testing.T) {
