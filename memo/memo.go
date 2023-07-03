@@ -2,7 +2,6 @@ package memo
 
 import (
 	"context"
-	"net/rpc"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -16,8 +15,6 @@ import (
 
 const AGENTS_COLLECTION = "agents"
 const MEMORIES_COLLECTION = "memories"
-
-type vector []float32
 
 type Memory struct {
 	ID  primitive.ObjectID `bson:"_id" json:"id"`
@@ -48,11 +45,9 @@ type Config struct {
 
 type Memo struct {
 	Config *Config
-	Mongo  *mongo.Client
-	Qdrant *rpc.Client
 
-	Agents   AgentModel
-	Memories MemoryModel
+	Agents   AgentModel  // agents model
+	Memories MemoryModel // memories model
 }
 
 // NewAgents creates the default Agents which implements the AgentModel interface.
@@ -67,7 +62,11 @@ func FromConfig(config_path string) *Memo {
 		MemorySearchLimit: 5, // top_k
 	}
 
-	toml.DecodeFile(config_path, &conf)
+	_, err := toml.DecodeFile(config_path, &conf)
+	if err != nil {
+		panic(err)
+	}
+
 	if conf.OpenAIAPIKey == "" {
 		panic("OpenAIAPIKey is empty")
 	}

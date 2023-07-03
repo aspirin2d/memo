@@ -149,6 +149,9 @@ func (ms *Memories) DeleteMany(ctx context.Context, ids []primitive.ObjectID) er
 
 	// delete memories from mongodb
 	dres, err := ms.mongo.DeleteMany(ctx, bson.M{"_id": bson.M{"$in": ids}})
+	if err != nil {
+		return err
+	}
 	if dres.DeletedCount != int64(len(ids)) {
 		return fmt.Errorf("some memories not deleted: \n%v", ids)
 	}
@@ -324,11 +327,11 @@ func (ms *Memories) deletePoints(ctx context.Context, aid primitive.ObjectID, pi
 	}
 
 	waitDelete := true
-	ms.qdrant.Delete(ctx, &pb.DeletePoints{
+	_, err := ms.qdrant.Delete(ctx, &pb.DeletePoints{
 		CollectionName: aid.Hex(),
 		Points:         &pb.PointsSelector{PointsSelectorOneOf: &pb.PointsSelector_Points{Points: &pb.PointsIdsList{Ids: ids}}},
 		Wait:           &waitDelete,
 	})
 
-	return nil
+	return err
 }

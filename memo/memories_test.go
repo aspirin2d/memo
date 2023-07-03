@@ -63,7 +63,8 @@ func (ms *MemoriesSuite) SetupSuite() {
 func (ms *MemoriesSuite) SetupTest() {
 	ctx := context.TODO()
 	agent := &Agent{Name: "Aspirin"}
-	ms.agents.Add(ctx, agent)
+	_, err := ms.agents.Add(ctx, agent)
+	ms.NoError(err)
 	ms.agent = agent
 }
 
@@ -80,14 +81,14 @@ func (ms *MemoriesSuite) TestAddMemory() {
 		Content: "Hey, I am Aspirin",
 	}
 
-	id, err := ms.memories.AddOne(ctx, ms.agent.ID, &memory1)
+	_, err := ms.memories.AddOne(ctx, ms.agent.ID, &memory1)
 	ms.NoError(err)
 
 	var memory2 = Memory{
 		Content: "Hey, I am Aspirin2D",
 	}
 
-	id, err = ms.memories.AddOne(ctx, ms.agent.ID, &memory2)
+	id, err := ms.memories.AddOne(ctx, ms.agent.ID, &memory2)
 	ms.NoError(err)
 
 	mem, err := ms.memories.GetOne(ctx, id)
@@ -148,6 +149,7 @@ func (ms *MemoriesSuite) TestAddMemories() {
 	ms.Nil(mem)
 
 	mems, err := ms.memories.GetMany(ctx, ids[2:])
+	ms.NoError(err)
 	ms.Len(mems, 3)
 }
 func (ms *MemoriesSuite) TestSearchMemories() {

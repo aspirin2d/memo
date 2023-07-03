@@ -127,7 +127,8 @@ func (s *AgentsSuite) TestDeleteAgent() {
 	s.NoError(err)
 	s.Equal(5, len(agents))
 
-	s.agents.Delete(ctx, agents[len(agents)-1].ID)
+	err = s.agents.Delete(ctx, agents[len(agents)-1].ID)
+	s.NoError(err)
 	agents, err = s.agents.List(ctx, primitive.NilObjectID)
 	s.NoError(err)
 	s.Equal(4, len(agents))
