@@ -27,9 +27,9 @@ type Memory struct {
 }
 
 type Agent struct {
-	ID      primitive.ObjectID `bson:"_id" json:"id"`
+	ID      primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
 	Name    string             `bson:"name" json:"name"`
-	Created time.Time          `bson:"created_at" json:"created_at"`
+	Created time.Time          `bson:"created_at,omitempty" json:"created_at,omitempty"`
 }
 
 type Config struct {
@@ -50,7 +50,7 @@ type Memo struct {
 	Agents   AgentModel  // agents model
 	Memories MemoryModel // memories model
 
-	logger *zap.SugaredLogger
+	Logger *zap.SugaredLogger
 }
 
 // NewAgents creates the default Agents which implements the AgentModel interface.
@@ -89,7 +89,12 @@ func FromConfig(config_path string) *Memo {
 
 	// logger
 	logger, _ := zap.NewProduction()
-	defer logger.Sync()
+	defer func() {
+		err = logger.Sync()
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	return &Memo{
 		Agents: &Agents{
@@ -104,6 +109,6 @@ func FromConfig(config_path string) *Memo {
 			ListLimit:   int64(conf.MemoryListLimit),
 		},
 
-		logger: logger.Sugar(),
+		Logger: logger.Sugar(),
 	}
 }

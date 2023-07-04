@@ -59,7 +59,7 @@ type AgentController interface {
 
 	GetAgent(c *gin.Context)
 
-	ListAgent(c *gin.Context)
+	ListAgents(c *gin.Context)
 }
 
 // MemoryController is a controller for handling memory requests
@@ -67,11 +67,13 @@ type MemoryController interface {
 	AddMemory(c *gin.Context)
 	AddMemories(c *gin.Context)
 
+	GetMemory(c *gin.Context)
+	GetMemories(c *gin.Context)
+
 	DeleteMemory(c *gin.Context)
 	DeleteMemories(c *gin.Context)
 
 	UpdateMemory(c *gin.Context)
 
-	GetMemory(c *gin.Context)
 	ListAgent(c *gin.Context)
 }

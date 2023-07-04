@@ -8,7 +8,7 @@ type ErrorMessage struct {
 // and logs the error if log is true
 func (m *Memo) NewError(err error, msg string, log bool) ErrorMessage {
 	if log {
-		m.logger.Error(err)
+		m.Logger.Error(err)
 	}
 	return ErrorMessage{Message: msg}
 }

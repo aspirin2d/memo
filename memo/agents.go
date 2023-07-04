@@ -22,13 +22,14 @@ type Agents struct {
 }
 
 // Add agent and return inserted id
-// if agent's id is not set, then it will create one
-// if agent's created time is not set, then it will use "time.now"
+// if agent's id is set, it will return an error
+// if agent's created time is not set, then it will be created
 func (s *Agents) Add(ctx context.Context, agent *Agent) (primitive.ObjectID, error) {
-	if agent.ID == primitive.NilObjectID {
-		agent.ID = primitive.NewObjectID()
+	if agent.ID != primitive.NilObjectID {
+		return primitive.NilObjectID, fmt.Errorf("agent id is not nil")
 	}
 
+	agent.ID = primitive.NewObjectID()
 	if agent.Created.IsZero() {
 		agent.Created = time.Now()
 	}
