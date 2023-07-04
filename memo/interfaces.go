@@ -1,6 +1,7 @@
 package memo
 
 import (
+	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/net/context"
 )
@@ -46,4 +47,31 @@ type MemoryModel interface {
 	// Search with query string, and return related memories and scores
 	// aid is agent's id which memories belong to
 	Search(ctx context.Context, aid primitive.ObjectID, query string) ([]*Memory, []float32, error)
+}
+
+// AgentController is a controller for handling agent requests
+type AgentController interface {
+	AddAgent(c *gin.Context)
+
+	DeleteAgent(c *gin.Context)
+
+	UpdateAgent(c *gin.Context)
+
+	GetAgent(c *gin.Context)
+
+	ListAgent(c *gin.Context)
+}
+
+// MemoryController is a controller for handling memory requests
+type MemoryController interface {
+	AddMemory(c *gin.Context)
+	AddMemories(c *gin.Context)
+
+	DeleteMemory(c *gin.Context)
+	DeleteMemories(c *gin.Context)
+
+	UpdateMemory(c *gin.Context)
+
+	GetMemory(c *gin.Context)
+	ListAgent(c *gin.Context)
 }
