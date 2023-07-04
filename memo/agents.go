@@ -26,7 +26,7 @@ type Agents struct {
 // if agent's created time is not set, then it will be created
 func (s *Agents) Add(ctx context.Context, agent *Agent) (primitive.ObjectID, error) {
 	if agent.ID != primitive.NilObjectID {
-		return primitive.NilObjectID, fmt.Errorf("agent id is not nil")
+		return primitive.NilObjectID, NewWrapError(400, fmt.Errorf("agent id should be nil"), "")
 	}
 
 	agent.ID = primitive.NewObjectID()
@@ -56,7 +56,7 @@ func (s Agents) Delete(ctx context.Context, id primitive.ObjectID) error {
 
 	// check if agent exists
 	if res.DeletedCount == 0 {
-		return fmt.Errorf("can't find the agent: %s", id)
+		return NewWrapError(404, fmt.Errorf("agent not found: %s", id), "")
 	}
 
 	return s.deleteQdrantCollection(ctx, id.Hex())
@@ -70,7 +70,7 @@ func (s *Agents) Update(ctx context.Context, agent *Agent) error {
 	}
 	// if no agent matched
 	if res.MatchedCount == 0 {
-		return fmt.Errorf("agent not found: %s", agent.ID.Hex())
+		return NewWrapError(404, fmt.Errorf("agent not found: %s", agent.ID.Hex()), "")
 	}
 
 	return err
@@ -78,14 +78,10 @@ func (s *Agents) Update(ctx context.Context, agent *Agent) error {
 
 // Get agent by id
 func (s *Agents) Get(ctx context.Context, id primitive.ObjectID) (agent *Agent, err error) {
-	res := s.mongo.FindOne(ctx, bson.M{"_id": id})
-	err = res.Err()
-	if err != nil {
-		return
+	err = s.mongo.FindOne(ctx, bson.M{"_id": id}).Decode(agent)
+	if err == mongo.ErrNoDocuments {
+		return nil, NewWrapError(404, fmt.Errorf("agent not found: %s", agent.ID.Hex()), "")
 	}
-
-	agent = &Agent{}
-	err = res.Decode(agent)
 	return
 }
 
@@ -98,10 +94,10 @@ func (s *Agents) List(ctx context.Context, offset primitive.ObjectID) (agents []
 		filter = bson.M{"_id": bson.M{"$lt": offset}}
 	}
 	cur, err := s.mongo.Find(ctx, filter, opts)
-
 	if err != nil {
 		return
 	}
+
 	err = cur.All(ctx, &agents)
 	return
 }
@@ -118,7 +114,6 @@ func (s Agents) createQdrantCollection(ctx context.Context, name string) (err er
 			},
 		},
 	})
-	// log.Printf("collection created: %v, error: %v", name, err)
 	return
 }
 
