@@ -11,7 +11,7 @@ func (m *Memo) AddAgent(c *gin.Context) {
 	agent := new(Agent)
 	err := c.BindJSON(agent)
 	if err != nil {
-		c.AbortWithStatusJSON(400, m.NewError(err, "can't bind json for the agent", false))
+		c.AbortWithStatusJSON(400, ErrMsg{"can't bind json to the agent"})
 		return
 	}
 
@@ -19,7 +19,7 @@ func (m *Memo) AddAgent(c *gin.Context) {
 	ctx := c.Request.Context()
 	id, err := m.Agents.Add(ctx, agent)
 	if err != nil {
-		c.AbortWithStatusJSON(500, m.NewError(err, "can't add agent", false))
+		c.AbortWithStatusJSON(500, err)
 		return
 	}
 
@@ -32,7 +32,7 @@ func (m *Memo) DeleteAgent(c *gin.Context) {
 	aid := c.Param("aid")
 	oid, err := primitive.ObjectIDFromHex(aid)
 	if err != nil {
-		c.AbortWithStatusJSON(400, m.NewError(err, "invalid agent id", false))
+		c.AbortWithStatusJSON(400, ErrMsg{"invalid agent id"})
 		return
 	}
 
@@ -40,7 +40,7 @@ func (m *Memo) DeleteAgent(c *gin.Context) {
 	ctx := c.Request.Context()
 	err = m.Agents.Delete(ctx, oid)
 	if err != nil {
-		c.AbortWithStatusJSON(400, m.NewError(err, "can't delete agent", false))
+		c.AbortWithStatusJSON(400, err)
 		return
 	}
 
@@ -53,7 +53,7 @@ func (m *Memo) GetAgent(c *gin.Context) {
 	aid := c.Param("aid")
 	oid, err := primitive.ObjectIDFromHex(aid)
 	if err != nil {
-		c.AbortWithStatusJSON(400, m.NewError(err, "invalid agent id", false))
+		c.AbortWithStatusJSON(400, ErrMsg{"invalid agent id"})
 		return
 	}
 
@@ -61,7 +61,7 @@ func (m *Memo) GetAgent(c *gin.Context) {
 	ctx := c.Request.Context()
 	agent, err := m.Agents.Get(ctx, oid)
 	if err != nil {
-		c.AbortWithStatusJSON(400, m.NewError(err, "can't delete agent", false))
+		c.AbortWithStatusJSON(400, err)
 		return
 	}
 
@@ -74,7 +74,7 @@ func (m *Memo) UpdateAgent(c *gin.Context) {
 	agent := new(Agent)
 	err := c.BindJSON(agent)
 	if err != nil {
-		c.AbortWithStatusJSON(400, m.NewError(err, "can't bind json for the agent", false))
+		c.AbortWithStatusJSON(400, ErrMsg{"can't bind json to the agent"})
 		return
 	}
 
@@ -82,7 +82,7 @@ func (m *Memo) UpdateAgent(c *gin.Context) {
 	ctx := c.Request.Context()
 	err = m.Agents.Update(ctx, agent)
 	if err != nil {
-		c.AbortWithStatusJSON(400, m.NewError(err, "can't delete agent", false))
+		c.AbortWithStatusJSON(400, err)
 		return
 	}
 
@@ -91,16 +91,25 @@ func (m *Memo) UpdateAgent(c *gin.Context) {
 
 // ListAgents is a gin Handler which list agents from the database.
 func (m *Memo) ListAgents(c *gin.Context) {
+	var oid primitive.ObjectID
+	var err error
 	// get offset from url params
 	offset := c.Param("offset")
-	// if offset is "", it will return NilObjectID
-	oid, _ := primitive.ObjectIDFromHex(offset)
+	if offset != "" {
+		oid, err = primitive.ObjectIDFromHex(offset)
+		if err != nil {
+			c.AbortWithStatusJSON(400, ErrMsg{"invalid offset id"})
+			return
+		}
+	} else {
+		oid = primitive.NilObjectID
+	}
 
 	//list agents from database
 	ctx := c.Request.Context()
 	agents, err := m.Agents.List(ctx, oid)
 	if err != nil {
-		c.AbortWithStatusJSON(400, m.NewError(err, "can't list agents", false))
+		c.AbortWithStatusJSON(400, err)
 		return
 	}
 

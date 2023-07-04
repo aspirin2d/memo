@@ -1,14 +1,19 @@
 package memo
 
-type ErrorMessage struct {
-	Message string `json:"msg"`
+type ModelError struct {
+	Code    int
+	Message string
+	Log     string
 }
 
-// NewError returns a new ErrorMessage with the given message
-// and logs the error if log is true
-func (m *Memo) NewError(err error, msg string, log bool) ErrorMessage {
-	if log {
-		m.Logger.Error(err)
+func NewModelError(code int, message string, log string) *ModelError {
+	return &ModelError{
+		Code:    code,
+		Message: message,
+		Log:     log,
 	}
-	return ErrorMessage{Message: msg}
+}
+
+type ErrMsg struct {
+	Message string `json:"msg"`
 }
