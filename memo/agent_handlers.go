@@ -11,7 +11,7 @@ func (m *Memo) AddAgent(c *gin.Context) {
 	agent := new(Agent)
 	err := c.BindJSON(agent)
 	if err != nil {
-		c.AbortWithStatusJSON(400, ErrMsg{"can't bind json to the agent"})
+		m.AbortWithError(c, NewWrapError(400, err, "can't bind json to the agent"))
 		return
 	}
 
@@ -19,7 +19,7 @@ func (m *Memo) AddAgent(c *gin.Context) {
 	ctx := c.Request.Context()
 	id, err := m.Agents.Add(ctx, agent)
 	if err != nil {
-		c.AbortWithStatusJSON(500, err)
+		m.AbortWithError(c, err)
 		return
 	}
 
@@ -32,7 +32,7 @@ func (m *Memo) DeleteAgent(c *gin.Context) {
 	aid := c.Param("aid")
 	oid, err := primitive.ObjectIDFromHex(aid)
 	if err != nil {
-		c.AbortWithStatusJSON(400, ErrMsg{"invalid agent id"})
+		m.AbortWithError(c, NewWrapError(400, err, "invalid agent id"))
 		return
 	}
 
@@ -40,7 +40,7 @@ func (m *Memo) DeleteAgent(c *gin.Context) {
 	ctx := c.Request.Context()
 	err = m.Agents.Delete(ctx, oid)
 	if err != nil {
-		c.AbortWithStatusJSON(400, err)
+		m.AbortWithError(c, err)
 		return
 	}
 
@@ -53,7 +53,7 @@ func (m *Memo) GetAgent(c *gin.Context) {
 	aid := c.Param("aid")
 	oid, err := primitive.ObjectIDFromHex(aid)
 	if err != nil {
-		c.AbortWithStatusJSON(400, ErrMsg{"invalid agent id"})
+		m.AbortWithError(c, NewWrapError(400, err, "invalid agent id"))
 		return
 	}
 
@@ -61,7 +61,7 @@ func (m *Memo) GetAgent(c *gin.Context) {
 	ctx := c.Request.Context()
 	agent, err := m.Agents.Get(ctx, oid)
 	if err != nil {
-		c.AbortWithStatusJSON(400, err)
+		m.AbortWithError(c, err)
 		return
 	}
 
@@ -74,7 +74,7 @@ func (m *Memo) UpdateAgent(c *gin.Context) {
 	agent := new(Agent)
 	err := c.BindJSON(agent)
 	if err != nil {
-		c.AbortWithStatusJSON(400, ErrMsg{"can't bind json to the agent"})
+		m.AbortWithError(c, NewWrapError(400, err, "can't bind JSON to the agent"))
 		return
 	}
 
@@ -82,7 +82,7 @@ func (m *Memo) UpdateAgent(c *gin.Context) {
 	ctx := c.Request.Context()
 	err = m.Agents.Update(ctx, agent)
 	if err != nil {
-		c.AbortWithStatusJSON(400, err)
+		m.AbortWithError(c, err)
 		return
 	}
 
@@ -98,7 +98,7 @@ func (m *Memo) ListAgents(c *gin.Context) {
 	if offset != "" {
 		oid, err = primitive.ObjectIDFromHex(offset)
 		if err != nil {
-			c.AbortWithStatusJSON(400, ErrMsg{"invalid offset id"})
+			m.AbortWithError(c, NewWrapError(400, err, "invalid offset id"))
 			return
 		}
 	} else {
@@ -109,7 +109,7 @@ func (m *Memo) ListAgents(c *gin.Context) {
 	ctx := c.Request.Context()
 	agents, err := m.Agents.List(ctx, oid)
 	if err != nil {
-		c.AbortWithStatusJSON(400, err)
+		m.AbortWithError(c, err)
 		return
 	}
 
