@@ -75,5 +75,5 @@ type MemoryController interface {
 
 	UpdateMemory(c *gin.Context)
 
-	ListAgent(c *gin.Context)
+	ListMemories(c *gin.Context)
 }
