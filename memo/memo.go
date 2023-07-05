@@ -89,12 +89,6 @@ func FromConfig(config_path string) *Memo {
 
 	// logger
 	logger, _ := zap.NewProduction()
-	defer func() {
-		err = logger.Sync()
-		if err != nil {
-			panic(err)
-		}
-	}()
 
 	return &Memo{
 		Agents: &Agents{

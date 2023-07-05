@@ -95,7 +95,7 @@ func (m *Memo) ListAgents(c *gin.Context) {
 	var err error
 	// get offset from url params
 	offset := c.Param("offset")
-	if offset != "" {
+	if offset != "" && offset != "nil" && offset != "-1" {
 		oid, err = primitive.ObjectIDFromHex(offset)
 		if err != nil {
 			m.AbortWithError(c, NewWrapError(400, err, "invalid offset id"))

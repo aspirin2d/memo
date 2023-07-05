@@ -27,15 +27,16 @@ func (mam *mockAgentsModel) Update(ctx context.Context, agent *Agent) error {
 }
 
 func (mam *mockAgentsModel) Delete(ctx context.Context, id primitive.ObjectID) error {
-	return nil
+	return mam.Error
 }
 
 func (mam *mockAgentsModel) Get(ctx context.Context, id primitive.ObjectID) (*Agent, error) {
-	return &Agent{Name: "aspirin2d"}, nil
+	return &Agent{Name: "aspirin2d"}, mam.Error
 }
 
 func (mam *mockAgentsModel) List(ctx context.Context, offset primitive.ObjectID) ([]*Agent, error) {
-	return nil, nil
+	list := make([]*Agent, 5)
+	return list, nil
 }
 
 type AgentHandlersSuite struct {
@@ -58,8 +59,10 @@ func (s *AgentHandlersSuite) SetupTest() {
 	s.writer = httptest.NewRecorder()
 	s.context, s.router = gin.CreateTestContext(s.writer)
 
-	s.router.POST("/add", s.memo.AddAgent)
-	s.router.GET("/get/:aid", s.memo.GetAgent)
+	s.router.GET("/list/:offset", s.memo.ListAgents)
+	s.router.GET("/:aid", s.memo.GetAgent)
+	s.router.PUT("/add", s.memo.AddAgent)
+	s.router.POST("/:aid/update", s.memo.UpdateAgent)
 }
 
 func (s *AgentHandlersSuite) TearDownTest() {
@@ -72,7 +75,7 @@ func (s *AgentHandlersSuite) TestAddAgent() {
 	}
 	body, _ := json.Marshal(mbody)
 
-	req := httptest.NewRequest("POST", "/add", bytes.NewReader(body))
+	req := httptest.NewRequest("PUT", "/add", bytes.NewReader(body))
 	s.router.ServeHTTP(s.writer, req)
 	var m map[string]interface{}
 	err := json.NewDecoder(s.writer.Body).Decode(&m)
@@ -90,7 +93,7 @@ func (s *AgentHandlersSuite) TestAddAgentWithError() {
 	}
 	body, _ := json.Marshal(mbody)
 
-	req := httptest.NewRequest("POST", "/add", bytes.NewReader(body))
+	req := httptest.NewRequest("PUT", "/add", bytes.NewReader(body))
 	s.router.ServeHTTP(s.writer, req)
 	var m map[string]interface{}
 	s.Equal(400, s.writer.Code)
@@ -99,7 +102,7 @@ func (s *AgentHandlersSuite) TestAddAgentWithError() {
 }
 
 func (s *AgentHandlersSuite) TestGetAgent() {
-	req := httptest.NewRequest("GET", "/get/123", nil)
+	req := httptest.NewRequest("GET", "/123", nil)
 	s.router.ServeHTTP(s.writer, req)
 	var m map[string]interface{}
 	s.Equal(400, s.writer.Code)
@@ -107,14 +110,42 @@ func (s *AgentHandlersSuite) TestGetAgent() {
 	s.Equal("invalid agent id", m["msg"])
 
 	s.writer = httptest.NewRecorder()
-	req = httptest.NewRequest("GET", "/get/"+primitive.NewObjectID().Hex(), nil)
+	req = httptest.NewRequest("GET", "/"+primitive.NewObjectID().Hex(), nil)
 	s.router.ServeHTTP(s.writer, req)
 	s.Equal(200, s.writer.Code)
-	s.T().Log(s.writer.Body.String())
 
 	var ag Agent
 	_ = json.NewDecoder(s.writer.Body).Decode(&ag)
 	s.Equal("aspirin2d", ag.Name)
+}
+
+func (s *AgentHandlersSuite) TestUpdateAgent() {
+	mbody := map[string]interface{}{
+		"name": "aspirin2d",
+	}
+	body, _ := json.Marshal(mbody)
+	req := httptest.NewRequest("POST", "/"+primitive.NewObjectID().Hex()+"/update", bytes.NewReader(body))
+	s.router.ServeHTTP(s.writer, req)
+	var m map[string]interface{}
+	s.Equal(200, s.writer.Code)
+	_ = json.NewDecoder(s.writer.Body).Decode(&m)
+	s.Equal(true, m["ok"])
+}
+
+func (s *AgentHandlersSuite) TestListAgents() {
+	req := httptest.NewRequest("GET", "/list/nil", nil)
+	s.router.ServeHTTP(s.writer, req)
+	var m []interface{}
+	s.Equal(200, s.writer.Code)
+	_ = json.NewDecoder(s.writer.Body).Decode(&m)
+	s.Equal(5, len(m))
+
+	s.writer = httptest.NewRecorder()
+	req = httptest.NewRequest("GET", "/list/-1", nil)
+	s.router.ServeHTTP(s.writer, req)
+	s.Equal(200, s.writer.Code)
+	_ = json.NewDecoder(s.writer.Body).Decode(&m)
+	s.Equal(5, len(m))
 }
 
 func TestAgentHandlersSuite(t *testing.T) {
