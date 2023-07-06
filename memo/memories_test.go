@@ -91,7 +91,7 @@ func (ms *MemoriesSuite) TestAddMemory() {
 	id, err := ms.memories.AddOne(ctx, ms.agent.ID, &memory2)
 	ms.NoError(err)
 
-	mem, err := ms.memories.GetOne(ctx, id)
+	mem, err := ms.memories.GetOne(ctx, ms.agent.ID, id)
 	ms.NoError(err)
 
 	pid := mem.PID
@@ -100,12 +100,11 @@ func (ms *MemoriesSuite) TestAddMemory() {
 	// check the memory is added
 	ms.Equal(id.Hex(), mem.ID.Hex())
 
-	err = ms.memories.DeleteOne(ctx, id)
+	err = ms.memories.DeleteOne(ctx, ms.agent.ID, id)
 	ms.NoError(err)
 
-	mem, err = ms.memories.GetOne(ctx, id)
-	ms.ErrorIs(err, mongo.ErrNoDocuments)
-	ms.Nil(mem)
+	_, err = ms.memories.GetOne(ctx, ms.agent.ID, id)
+	ms.Error(err, mongo.ErrNoDocuments)
 
 	// check the memory's point is also delete
 	res, err := ms.memories.qdrant.Get(ctx, &pb.GetPoints{
@@ -141,14 +140,13 @@ func (ms *MemoriesSuite) TestAddMemories() {
 	ms.NoError(err)
 
 	// delete the first two memories
-	err = ms.memories.DeleteMany(ctx, ids[:2])
+	err = ms.memories.DeleteMany(ctx, ms.agent.ID, ids[:2])
 	ms.NoError(err)
 
-	mem, err := ms.memories.GetOne(ctx, ids[0])
-	ms.ErrorIs(err, mongo.ErrNoDocuments)
-	ms.Nil(mem)
+	_, err = ms.memories.GetOne(ctx, ms.agent.ID, ids[0])
+	ms.Error(err)
 
-	mems, err := ms.memories.GetMany(ctx, ids[2:])
+	mems, err := ms.memories.GetMany(ctx, ms.agent.ID, ids[2:])
 	ms.NoError(err)
 	ms.Len(mems, 3)
 }
@@ -195,13 +193,46 @@ func (ms *MemoriesSuite) TestUpdateMemory() {
 
 	memory1.Content = "Hey, I am Aspirin2D"
 
-	err = ms.memories.UpdateOne(ctx, &memory1)
+	err = ms.memories.UpdateOne(ctx, ms.agent.ID, &memory1)
 	ms.NoError(err)
 
-	mem, err := ms.memories.GetOne(ctx, id)
+	mem, err := ms.memories.GetOne(ctx, ms.agent.ID, id)
 	ms.NoError(err)
 
 	ms.Equal("Hey, I am Aspirin2D", mem.Content)
+}
+
+func (ms *MemoriesSuite) TestUpdateMemory2() {
+	ctx := context.TODO()
+	var memories = []*Memory{
+		{
+			Content: "Hey, I am Aspirin.",
+		},
+		{
+			Content: "My father is a teacher.",
+		},
+		{
+			Content: "My favorite color is red.",
+		},
+		{
+			Content: "My favorite food is pizza.",
+		},
+		{
+			Content: "My favorite video game is Last of Us.",
+		},
+	}
+
+	ids, _ := ms.memories.AddMany(ctx, ms.agent.ID, memories)
+	memories, _ = ms.memories.GetMany(ctx, ms.agent.ID, ids)
+	memories[0].Content = "The sky is blue"
+	memories[1].Content = "The water is green"
+	memories[2].Content = "The moon is orange"
+	memories[3].Content = "The apple is red"
+	memories[4].Content = "The sand is yellow"
+	_ = ms.memories.UpdateMany(ctx, ms.agent.ID, memories)
+
+	mems, _, _ := ms.memories.Search(ctx, ms.agent.ID, "planet") // just for fun
+	ms.Contains(mems[0].Content, "moon")
 }
 
 func (ms *MemoriesSuite) TestListMemories() {

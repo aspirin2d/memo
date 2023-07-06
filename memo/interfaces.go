@@ -30,14 +30,19 @@ type MemoryModel interface {
 	AddMany(ctx context.Context, agent primitive.ObjectID, memories []*Memory) ([]primitive.ObjectID, error)
 
 	// Update memory
-	UpdateOne(ctx context.Context, memory *Memory) error
+	GetOne(ctx context.Context, aid primitive.ObjectID, mid primitive.ObjectID) (*Memory, error)
 	// Update memories
-	// UpdateMany(ctx context.Context, memories []*Memory) error
+	GetMany(ctx context.Context, aid primitive.ObjectID, ids []primitive.ObjectID) ([]*Memory, error)
+
+	// Update memory
+	UpdateOne(ctx context.Context, aid primitive.ObjectID, memory *Memory) error
+	// Update memories
+	UpdateMany(ctx context.Context, aid primitive.ObjectID, memories []*Memory) error
 
 	// Delete memory by id
-	DeleteOne(ctx context.Context, id primitive.ObjectID) error
+	DeleteOne(ctx context.Context, aid primitive.ObjectID, id primitive.ObjectID) error
 	// Delete memories by ids
-	DeleteMany(ctx context.Context, ids []primitive.ObjectID) error
+	DeleteMany(ctx context.Context, aid primitive.ObjectID, ids []primitive.ObjectID) error
 
 	// ListMemories and offset memory's id
 	// aid is agent's id which memories belong to
@@ -64,16 +69,13 @@ type AgentController interface {
 
 // MemoryController is a controller for handling memory requests
 type MemoryController interface {
-	AddMemory(c *gin.Context)
 	AddMemories(c *gin.Context)
 
-	GetMemory(c *gin.Context)
 	GetMemories(c *gin.Context)
 
-	DeleteMemory(c *gin.Context)
 	DeleteMemories(c *gin.Context)
 
-	UpdateMemory(c *gin.Context)
+	UpdateMemories(c *gin.Context)
 
-	ListAgent(c *gin.Context)
+	ListMemories(c *gin.Context)
 }

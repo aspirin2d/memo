@@ -78,6 +78,7 @@ func (s *Agents) Update(ctx context.Context, agent *Agent) error {
 
 // Get agent by id
 func (s *Agents) Get(ctx context.Context, id primitive.ObjectID) (agent *Agent, err error) {
+	agent = &Agent{}
 	err = s.mongo.FindOne(ctx, bson.M{"_id": id}).Decode(agent)
 	if err == mongo.ErrNoDocuments {
 		return nil, NewWrapError(404, fmt.Errorf("agent not found: %s", agent.ID.Hex()), "")

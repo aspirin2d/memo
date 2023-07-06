@@ -71,9 +71,8 @@ func (s *AgentsSuite) TestAddAgent() {
 	s.NotEqual(id0.Hex(), id1.Hex())
 
 	newID := primitive.NewObjectID()
-	id3, err := s.agents.Add(ctx, &Agent{ID: newID, Name: "aspirin2d"})
-	s.NoError(err)
-	s.Equal(newID.Hex(), id3.Hex())
+	_, err = s.agents.Add(ctx, &Agent{ID: newID, Name: "aspirin2d"})
+	s.Error(err)
 }
 
 func (s *AgentsSuite) TestGetAgent() {
