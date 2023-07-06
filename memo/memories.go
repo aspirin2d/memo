@@ -335,6 +335,7 @@ func (ag *Memories) upsertPoints(ctx context.Context, aid primitive.ObjectID, pi
 	return nil
 }
 
+// deletePoints from qdrant by ids
 func (ms *Memories) deletePoints(ctx context.Context, aid primitive.ObjectID, pids []uuid.UUID) error {
 	ids := make([]*pb.PointId, len(pids))
 	for idx, p := range pids {

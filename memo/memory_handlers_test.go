@@ -79,7 +79,10 @@ func (s *MemoryHandlersSuite) SetupTest() {
 	s.writer = httptest.NewRecorder()
 	s.context, s.router = gin.CreateTestContext(s.writer)
 
-	s.router.PUT("/:aid/add", s.memo.GetAgentId, s.memo.AddMemories)
+	s.router.POST("/:aid/add", s.memo.GetAgentId, s.memo.AddMemories)
+	s.router.DELETE("/:aid/delete", s.memo.GetAgentId, s.memo.DeleteMemories)
+	s.router.PUT("/:aid/update", s.memo.GetAgentId, s.memo.UpdateMemories)
+	s.router.GET("/:aid/get", s.memo.GetAgentId, s.memo.GetMemories)
 }
 func (s *MemoryHandlersSuite) TearDownTest() {
 	s.memo.Memories.(*mockMemoryModel).Error = nil
@@ -92,11 +95,43 @@ func (s *MemoryHandlersSuite) TestAddMemories() {
 	body, _ := json.Marshal(mbody)
 
 	url := "/" + primitive.NewObjectID().Hex() + "/add"
-	req := httptest.NewRequest("PUT", url, bytes.NewReader(body))
+	req := httptest.NewRequest("POST", url, bytes.NewReader(body))
 	s.router.ServeHTTP(s.writer, req)
 	var m map[string]interface{}
 	_ = json.NewDecoder(s.writer.Body).Decode(&m)
 	s.NotNil(m["inserted"])
+}
+
+func (s *MemoryHandlersSuite) TestDelMemories() {
+	mbody := []string{
+		new(primitive.ObjectID).Hex(),
+		new(primitive.ObjectID).Hex(),
+	}
+	body, _ := json.Marshal(mbody)
+	url := "/" + primitive.NewObjectID().Hex() + "/delete"
+	req := httptest.NewRequest("DELETE", url, bytes.NewReader(body))
+	s.router.ServeHTTP(s.writer, req)
+
+	s.T().Log(s.writer.Body.String())
+	var m map[string]interface{}
+	_ = json.NewDecoder(s.writer.Body).Decode(&m)
+	s.NotNil(m["ok"])
+}
+
+func (s *MemoryHandlersSuite) TestUpdateMemories() {
+	mbody := []map[string]interface{}{
+		{"id": new(primitive.ObjectID).Hex()},
+		{"id": new(primitive.ObjectID).Hex()},
+	}
+	body, _ := json.Marshal(mbody)
+	url := "/" + primitive.NewObjectID().Hex() + "/update"
+	req := httptest.NewRequest("PUT", url, bytes.NewReader(body))
+	s.router.ServeHTTP(s.writer, req)
+
+	s.T().Log(s.writer.Body.String())
+	var m map[string]interface{}
+	_ = json.NewDecoder(s.writer.Body).Decode(&m)
+	s.NotNil(m["ok"])
 }
 
 func TestMemoryHandlersSuite(t *testing.T) {
