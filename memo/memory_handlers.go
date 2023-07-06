@@ -2,6 +2,7 @@ package memo
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -49,11 +50,17 @@ func (m *Memo) GetMemories(c *gin.Context) {
 	aid, _ := c.Get("agent")
 	agent := aid.(primitive.ObjectID)
 
-	var ids []primitive.ObjectID
-	err := c.ShouldBindJSON(&ids)
-	if err != nil {
-		m.AbortWithError(c, NewWrapError(400, err, "can't bind memories"))
-		return
+	q := c.Query("ids")
+	qids := strings.Split(q, ",")
+	ids := make([]primitive.ObjectID, len(qids))
+
+	for idx, qid := range qids {
+		oid, err := primitive.ObjectIDFromHex(qid)
+		if err != nil {
+			m.AbortWithError(c, NewWrapError(400, err, "can't parse objectid: "+qids[0]))
+			return
+		}
+		ids[idx] = oid
 	}
 
 	ctx := c.Request.Context()
@@ -70,15 +77,21 @@ func (m *Memo) DeleteMemories(c *gin.Context) {
 	aid, _ := c.Get("agent")
 	agent := aid.(primitive.ObjectID)
 
-	var ids []primitive.ObjectID
-	err := c.ShouldBindJSON(&ids)
-	if err != nil {
-		m.AbortWithError(c, NewWrapError(400, err, "can't bind memory ids"))
-		return
+	q := c.Query("ids")
+	qids := strings.Split(q, ",")
+	ids := make([]primitive.ObjectID, len(qids))
+
+	for idx, qid := range qids {
+		oid, err := primitive.ObjectIDFromHex(qid)
+		if err != nil {
+			m.AbortWithError(c, NewWrapError(400, err, "can't parse objectid: "+qids[0]))
+			return
+		}
+		ids[idx] = oid
 	}
 
 	ctx := c.Request.Context()
-	err = m.Memories.DeleteMany(ctx, agent, ids)
+	err := m.Memories.DeleteMany(ctx, agent, ids)
 	if err != nil {
 		m.AbortWithError(c, err)
 		return
@@ -115,7 +128,7 @@ func (m *Memo) ListMemories(c *gin.Context) {
 	// get offset from url params
 	var oid primitive.ObjectID
 	var err error
-	offset := c.Param("offset")
+	offset := c.Query("offset")
 	if offset != "" && offset != "nil" && offset != "-1" {
 		oid, err = primitive.ObjectIDFromHex(offset)
 		if err != nil {
@@ -134,4 +147,26 @@ func (m *Memo) ListMemories(c *gin.Context) {
 	}
 
 	c.JSON(200, memories)
+}
+
+func (m *Memo) SearchMemories(c *gin.Context) {
+	aid, _ := c.Get("agent")
+	agent := aid.(primitive.ObjectID)
+
+	// get offset from url params
+	var err error
+	query := c.Query("query")
+	if query == "" {
+		m.AbortWithError(c, NewWrapError(400, err, "empty query"))
+		return
+	}
+
+	ctx := c.Request.Context()
+	memories, scores, err := m.Memories.Search(ctx, agent, query)
+	if err != nil {
+		m.AbortWithError(c, err)
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{"memories": memories, "scores": scores})
 }

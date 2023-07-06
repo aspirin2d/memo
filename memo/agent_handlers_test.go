@@ -61,7 +61,7 @@ func (s *AgentHandlersSuite) SetupTest() {
 	s.writer = httptest.NewRecorder()
 	s.context, s.router = gin.CreateTestContext(s.writer)
 
-	s.router.GET("/list/:offset", s.memo.ListAgents)
+	s.router.GET("/list", s.memo.ListAgents)
 	s.router.GET("/:aid", s.memo.GetAgent)
 	s.router.PUT("/add", s.memo.AddAgent)
 	s.router.POST("/:aid/update", s.memo.UpdateAgent)
@@ -136,7 +136,7 @@ func (s *AgentHandlersSuite) TestUpdateAgent() {
 }
 
 func (s *AgentHandlersSuite) TestListAgents() {
-	req := httptest.NewRequest("GET", "/list/nil", nil)
+	req := httptest.NewRequest("GET", "/list?offset=nil", nil)
 	s.router.ServeHTTP(s.writer, req)
 	var m []interface{}
 	s.Equal(200, s.writer.Code)
@@ -144,7 +144,7 @@ func (s *AgentHandlersSuite) TestListAgents() {
 	s.Equal(5, len(m))
 
 	s.writer = httptest.NewRecorder()
-	req = httptest.NewRequest("GET", "/list/-1", nil)
+	req = httptest.NewRequest("GET", "/list", nil)
 	s.router.ServeHTTP(s.writer, req)
 	s.Equal(200, s.writer.Code)
 	_ = json.NewDecoder(s.writer.Body).Decode(&m)
