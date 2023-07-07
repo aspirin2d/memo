@@ -61,7 +61,6 @@ func (s *AgentHandlersSuite) SetupTest() {
 	s.writer = httptest.NewRecorder()
 	s.context, s.router = gin.CreateTestContext(s.writer)
 
-
 	s.router.GET("/list", s.memo.ListAgents)
 	s.router.GET("/:aid", s.memo.GetAgent)
 	s.router.PUT("/add", s.memo.AddAgent)
@@ -97,7 +96,6 @@ func (s *AgentHandlersSuite) TestAddAgentWithError() {
 	}
 	body, _ := json.Marshal(mbody)
 
-
 	req := httptest.NewRequest("PUT", "/add", bytes.NewReader(body))
 	s.router.ServeHTTP(s.writer, req)
 	var m map[string]interface{}
@@ -125,11 +123,13 @@ func (s *AgentHandlersSuite) TestGetAgent() {
 }
 
 func (s *AgentHandlersSuite) TestUpdateAgent() {
+	aid := primitive.NewObjectID()
 	mbody := map[string]interface{}{
 		"name": "aspirin2d",
+		"id":   aid,
 	}
 	body, _ := json.Marshal(mbody)
-	req := httptest.NewRequest("POST", "/"+primitive.NewObjectID().Hex()+"/update", bytes.NewReader(body))
+	req := httptest.NewRequest("POST", "/"+aid.Hex()+"/update", bytes.NewReader(body))
 	s.router.ServeHTTP(s.writer, req)
 	var m map[string]interface{}
 	s.Equal(200, s.writer.Code)
