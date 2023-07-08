@@ -106,6 +106,8 @@ func FromConfig(config_path string) *Memo {
 			ListLimit:   int64(conf.MemoryListLimit),
 		},
 
+		Config: &conf,
+
 		Logger: logger.Sugar(),
 	}
 }
