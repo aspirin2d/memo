@@ -96,6 +96,7 @@ func (s *AgentHandlersSuite) TestAddAgentWithError() {
 	}
 	body, _ := json.Marshal(mbody)
 
+
 	req := httptest.NewRequest("PUT", "/add", bytes.NewReader(body))
 	s.router.ServeHTTP(s.writer, req)
 	var m map[string]interface{}
