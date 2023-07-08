@@ -17,6 +17,8 @@ import (
 const AGENTS_COLLECTION = "agents"
 const MEMORIES_COLLECTION = "memories"
 
+type vectors []float32
+
 type Memory struct {
 	ID  primitive.ObjectID `bson:"_id" json:"id"`
 	AID primitive.ObjectID `bson:"aid" json:"aid"` // agent's id
@@ -49,6 +51,7 @@ type Memo struct {
 
 	Agents   AgentModel  // agents model
 	Memories MemoryModel // memories model
+	LLM      LLM         // llm for embedding and chatting
 
 	Logger *zap.SugaredLogger
 }

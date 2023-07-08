@@ -25,7 +25,7 @@ type MemoriesSuite struct {
 
 func (ms *MemoriesSuite) SetupSuite() {
 	// check agents is implements AgentModel
-	var _ AgentModel = (*Agents)(nil)
+	var _ MemoryModel = (*Memories)(nil)
 
 	ctx := context.TODO()
 	// mongodb
