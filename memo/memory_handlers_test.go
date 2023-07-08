@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -107,9 +108,9 @@ func (s *MemoryHandlersSuite) TestDelMemories() {
 		new(primitive.ObjectID).Hex(),
 		new(primitive.ObjectID).Hex(),
 	}
-	body, _ := json.Marshal(mbody)
-	url := "/" + primitive.NewObjectID().Hex() + "/delete"
-	req := httptest.NewRequest("DELETE", url, bytes.NewReader(body))
+	ids := strings.Join(mbody, ",")
+	url := "/" + primitive.NewObjectID().Hex() + "/delete?ids=" + ids
+	req := httptest.NewRequest("DELETE", url, nil)
 	s.router.ServeHTTP(s.writer, req)
 
 	s.T().Log(s.writer.Body.String())
