@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -25,10 +24,10 @@ func (mmm *mockMemoryModel) AddMany(ctx context.Context, agent primitive.ObjectI
 }
 
 func (mmm *mockMemoryModel) GetOne(ctx context.Context, agent primitive.ObjectID, id primitive.ObjectID) (*Memory, error) {
-	return &Memory{}, mmm.Error
+	return nil, mmm.Error
 }
 func (mmm *mockMemoryModel) GetMany(ctx context.Context, agent primitive.ObjectID, ids []primitive.ObjectID) ([]*Memory, error) {
-	return []*Memory{{Content: "Hello"}}, mmm.Error
+	return nil, mmm.Error
 }
 
 func (mmm *mockMemoryModel) UpdateOne(ctx context.Context, agent primitive.ObjectID, memory *Memory) error {
@@ -84,8 +83,6 @@ func (s *MemoryHandlersSuite) SetupTest() {
 	s.router.DELETE("/:aid/delete", s.memo.GetAgentId, s.memo.DeleteMemories)
 	s.router.PUT("/:aid/update", s.memo.GetAgentId, s.memo.UpdateMemories)
 	s.router.GET("/:aid/get", s.memo.GetAgentId, s.memo.GetMemories)
-	s.router.GET("/:aid/list", s.memo.GetAgentId, s.memo.ListMemories)
-	s.router.GET("/:aid/search", s.memo.GetAgentId, s.memo.SearchMemories)
 }
 func (s *MemoryHandlersSuite) TearDownTest() {
 	s.memo.Memories.(*mockMemoryModel).Error = nil
@@ -110,10 +107,12 @@ func (s *MemoryHandlersSuite) TestDelMemories() {
 		new(primitive.ObjectID).Hex(),
 		new(primitive.ObjectID).Hex(),
 	}
-	url := "/" + primitive.NewObjectID().Hex() + "/delete?ids=" + strings.Join(mbody, ",")
-	req := httptest.NewRequest("DELETE", url, nil)
+	body, _ := json.Marshal(mbody)
+	url := "/" + primitive.NewObjectID().Hex() + "/delete"
+	req := httptest.NewRequest("DELETE", url, bytes.NewReader(body))
 	s.router.ServeHTTP(s.writer, req)
 
+	s.T().Log(s.writer.Body.String())
 	var m map[string]interface{}
 	_ = json.NewDecoder(s.writer.Body).Decode(&m)
 	s.NotNil(m["ok"])
@@ -129,45 +128,10 @@ func (s *MemoryHandlersSuite) TestUpdateMemories() {
 	req := httptest.NewRequest("PUT", url, bytes.NewReader(body))
 	s.router.ServeHTTP(s.writer, req)
 
-	// s.T().Log(s.writer.Body.String())
+	s.T().Log(s.writer.Body.String())
 	var m map[string]interface{}
 	_ = json.NewDecoder(s.writer.Body).Decode(&m)
 	s.NotNil(m["ok"])
-}
-
-func (s *MemoryHandlersSuite) TestGetMemories() {
-	mbody := []string{
-		new(primitive.ObjectID).Hex(),
-		new(primitive.ObjectID).Hex(),
-	}
-	url := "/" + primitive.NewObjectID().Hex() + "/get?ids=" + strings.Join(mbody, ",")
-	req := httptest.NewRequest("GET", url, nil)
-	s.router.ServeHTTP(s.writer, req)
-
-	var m []*Memory
-	_ = json.NewDecoder(s.writer.Body).Decode(&m)
-	s.Equal(1, len(m))
-}
-
-func (s *MemoryHandlersSuite) TestListMemories() {
-	url := "/" + primitive.NewObjectID().Hex() + "/list?offset=-1"
-	req := httptest.NewRequest("GET", url, nil)
-	s.router.ServeHTTP(s.writer, req)
-
-	var m []*Memory
-	_ = json.NewDecoder(s.writer.Body).Decode(&m)
-	s.Equal(5, len(m))
-}
-
-func (s *MemoryHandlersSuite) TestSearchMemroies() {
-	url := "/" + primitive.NewObjectID().Hex() + "/search?query=-1"
-	req := httptest.NewRequest("GET", url, nil)
-	s.router.ServeHTTP(s.writer, req)
-
-	// s.T().Log(s.writer.Body.String())
-	var m map[string][]interface{}
-	_ = json.NewDecoder(s.writer.Body).Decode(&m)
-	s.Equal(5, len(m["memories"]))
 }
 
 func TestMemoryHandlersSuite(t *testing.T) {

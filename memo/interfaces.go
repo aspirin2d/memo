@@ -79,3 +79,8 @@ type MemoryController interface {
 
 	ListMemories(c *gin.Context)
 }
+
+type LLM interface {
+	Embedding(ctx context.Context, query string) ([]vectors, error)
+	Chat(ctx context.Context, msg []ChatMessage) ([]ChatMessage, error)
+}

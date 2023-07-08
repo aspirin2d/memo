@@ -1,0 +1,6 @@
+openai_api_key = "sk-your-openai-api-key"
+
+mongo_uri = "mongodb://localhost:27017/"
+mongo_db_name = "memo"
+
+qdrant_uri = "localhost:6334" # do not add http or https, cause it uses grpc protocol

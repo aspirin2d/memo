@@ -70,11 +70,23 @@ func (m *Memo) GetAgent(c *gin.Context) {
 
 // UpdateAgent is a gin Handler which update an agent from the database.
 func (m *Memo) UpdateAgent(c *gin.Context) {
+	// get agent id from url params
+	aid := c.Param("aid")
+	oid, err := primitive.ObjectIDFromHex(aid)
+	if err != nil {
+		m.AbortWithError(c, NewWrapError(400, err, "invalid agent id"))
+		return
+	}
 	// get agent from request body
 	agent := new(Agent)
-	err := c.BindJSON(agent)
+	err = c.BindJSON(agent)
 	if err != nil {
 		m.AbortWithError(c, NewWrapError(400, err, "can't bind JSON to the agent"))
+		return
+	}
+
+	if agent.ID.Hex() != oid.Hex() {
+		m.AbortWithError(c, NewWrapError(400, err, "agent id in body and url params don't match"))
 		return
 	}
 
