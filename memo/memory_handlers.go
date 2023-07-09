@@ -153,9 +153,9 @@ func (m *Memo) SearchMemories(c *gin.Context) {
 	aid, _ := c.Get("agent")
 	agent := aid.(primitive.ObjectID)
 
-	// get offset from url params
+	// get query from url params
 	var err error
-	query := c.Query("query")
+	query := c.Query("q")
 	if query == "" {
 		m.AbortWithError(c, NewWrapError(400, err, "empty query"))
 		return
