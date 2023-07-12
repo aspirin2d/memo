@@ -105,12 +105,12 @@ func FromConfig(config_path string) *Memo {
 		Memories: &Memories{
 			mongo:       mc.Database(conf.MongoDb).Collection(MEMORIES_COLLECTION),
 			qdrant:      pb.NewPointsClient(qc),
+			llm:         llm,
 			SearchLimit: int64(conf.MemorySearchLimit),
 			ListLimit:   int64(conf.MemoryListLimit),
 		},
 
 		Config: &conf,
-		LLM:    llm,
 		Logger: logger.Sugar(),
 	}
 }

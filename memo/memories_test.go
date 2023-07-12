@@ -5,7 +5,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	pb "github.com/qdrant/go-client/qdrant"
-	"github.com/sashabaranov/go-openai"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -51,10 +50,9 @@ func (ms *MemoriesSuite) SetupSuite() {
 		panic(err)
 	}
 	ms.memories = &Memories{
-		qdrant: pb.NewPointsClient(qc),
-		mongo:  mc.Database("test-db").Collection("memories"),
-		openai: openai.NewClient(config.OpenAIAPIKey),
-
+		qdrant:      pb.NewPointsClient(qc),
+		mongo:       mc.Database("test-db").Collection("memories"),
+		llm:         NewOpenAI(config.OpenAIAPIKey),
 		SearchLimit: 3, // search limit
 	}
 }
