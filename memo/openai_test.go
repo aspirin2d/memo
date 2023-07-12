@@ -8,6 +8,9 @@ import (
 )
 
 func TestEmbedding(t *testing.T) {
+	// check agents is implements AgentModel
+	var _ LLM = (*OpenAI)(nil)
+
 	memo := FromConfig("../.config.toml")
 	oa := NewOpenAI(memo.Config.OpenAIAPIKey)
 	ctx := context.TODO()

@@ -90,6 +90,9 @@ func FromConfig(config_path string) *Memo {
 		panic(err)
 	}
 
+	// LLM Client
+	llm := NewOpenAI(conf.OpenAIAPIKey)
+
 	// logger
 	logger, _ := zap.NewProduction()
 
@@ -107,7 +110,7 @@ func FromConfig(config_path string) *Memo {
 		},
 
 		Config: &conf,
-
+		LLM:    llm,
 		Logger: logger.Sugar(),
 	}
 }
