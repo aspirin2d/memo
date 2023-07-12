@@ -82,5 +82,5 @@ type MemoryController interface {
 
 type LLM interface {
 	Embedding(ctx context.Context, contents []string) ([]vectors, error)
-	Chat(ctx context.Context, messages []ChatMessage) ([]ChatMessage, error)
+	Chat(ctx context.Context, messages []ChatMessage) (ChatMessage, error)
 }

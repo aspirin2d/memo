@@ -90,6 +90,9 @@ func FromConfig(config_path string) *Memo {
 		panic(err)
 	}
 
+	// LLM Client
+	llm := NewOpenAI(conf.OpenAIAPIKey)
+
 	// logger
 	logger, _ := zap.NewProduction()
 
@@ -102,12 +105,12 @@ func FromConfig(config_path string) *Memo {
 		Memories: &Memories{
 			mongo:       mc.Database(conf.MongoDb).Collection(MEMORIES_COLLECTION),
 			qdrant:      pb.NewPointsClient(qc),
+			llm:         llm,
 			SearchLimit: int64(conf.MemorySearchLimit),
 			ListLimit:   int64(conf.MemoryListLimit),
 		},
 
 		Config: &conf,
-
 		Logger: logger.Sugar(),
 	}
 }

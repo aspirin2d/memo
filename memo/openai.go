@@ -11,6 +11,7 @@ type ChatMessage struct {
 	Content string `json:"message" bson:"message" toml:"message"`
 }
 
+// OpenAI which impletented LLM interface
 type OpenAI struct {
 	client         *openai.Client
 	chatModel      string

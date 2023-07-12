@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 	pb "github.com/qdrant/go-client/qdrant"
-	openai "github.com/sashabaranov/go-openai"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -20,7 +19,8 @@ import (
 type Memories struct {
 	mongo  *mongo.Collection
 	qdrant pb.PointsClient
-	openai *openai.Client
+
+	llm LLM
 
 	SearchLimit int64
 	ListLimit   int64
@@ -79,7 +79,7 @@ func (ms *Memories) AddMany(ctx context.Context, aid primitive.ObjectID, memorie
 	}
 
 	// create embeddings
-	ems, err := ms.embedding(ctx, contents)
+	ems, err := ms.llm.Embedding(ctx, contents)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +204,7 @@ func (ms *Memories) UpdateMany(ctx context.Context, aid primitive.ObjectID, memo
 	}
 
 	// generate embedding for new content
-	ems, err := ms.embedding(ctx, contents)
+	ems, err := ms.llm.Embedding(ctx, contents)
 	if err != nil {
 		return err
 	}
@@ -232,13 +232,13 @@ func (ms *Memories) List(ctx context.Context, aid primitive.ObjectID, offset pri
 // Search searches memories by query
 // id is aeget's id
 func (ms *Memories) Search(ctx context.Context, aid primitive.ObjectID, query string) ([]*Memory, []float32, error) {
-	ems, err := ms.embedding(ctx, []string{query})
+	ems, err := ms.llm.Embedding(ctx, []string{query})
 	if err != nil {
 		return nil, nil, err
 	}
 	res, err := ms.qdrant.Search(ctx, &pb.SearchPoints{
 		CollectionName: aid.Hex(),
-		Vector:         ems[0].Embedding,
+		Vector:         ems[0],
 		WithPayload:    &pb.WithPayloadSelector{SelectorOptions: &pb.WithPayloadSelector_Enable{Enable: true}},  // with payload
 		WithVectors:    &pb.WithVectorsSelector{SelectorOptions: &pb.WithVectorsSelector_Enable{Enable: false}}, // without vectors
 		Limit:          uint64(ms.SearchLimit),
@@ -296,30 +296,16 @@ func (ms *Memories) Search(ctx context.Context, aid primitive.ObjectID, query st
 	return sorted, scores, nil
 }
 
-func (ag *Memories) embedding(ctx context.Context, contents []string) ([]openai.Embedding, error) {
-	req := openai.EmbeddingRequest{
-		Input: contents,
-		Model: openai.AdaEmbeddingV2,
-	}
-
-	res, err := ag.openai.CreateEmbeddings(ctx, req)
-	if err != nil {
-		return nil, NewWrapError(500, err, "embedding error")
-	}
-
-	return res.Data, nil
-}
-
-func (ag *Memories) upsertPoints(ctx context.Context, aid primitive.ObjectID, pids []string, mids []primitive.ObjectID, ems []openai.Embedding) error {
+func (ag *Memories) upsertPoints(ctx context.Context, aid primitive.ObjectID, pids []string, mids []primitive.ObjectID, ems []vectors) error {
 	l := len(ems)
 	points := make([]*pb.PointStruct, l)
-	for _, em := range ems {
+	for i, em := range ems {
 		point := &pb.PointStruct{
-			Id:      &pb.PointId{PointIdOptions: &pb.PointId_Uuid{Uuid: pids[em.Index]}},
-			Payload: map[string]*pb.Value{"mid": {Kind: &pb.Value_StringValue{StringValue: mids[em.Index].Hex()}}},
-			Vectors: &pb.Vectors{VectorsOptions: &pb.Vectors_Vector{Vector: &pb.Vector{Data: em.Embedding}}},
+			Id:      &pb.PointId{PointIdOptions: &pb.PointId_Uuid{Uuid: pids[i]}},
+			Payload: map[string]*pb.Value{"mid": {Kind: &pb.Value_StringValue{StringValue: mids[i].Hex()}}},
+			Vectors: &pb.Vectors{VectorsOptions: &pb.Vectors_Vector{Vector: &pb.Vector{Data: em}}},
 		}
-		points[em.Index] = point
+		points[i] = point
 	}
 	waitUpsert := true
 	_, err := ag.qdrant.Upsert(ctx, &pb.UpsertPoints{
