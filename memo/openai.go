@@ -26,6 +26,7 @@ func NewOpenAI(key string) *OpenAI {
 	}
 }
 
+// Embedding call openai embedding api to generate vectors
 func (oa *OpenAI) Embedding(ctx context.Context, contents []string) (ems []vectors, err error) {
 	req := openai.EmbeddingRequest{
 		Input: contents,
@@ -44,7 +45,7 @@ func (oa *OpenAI) Embedding(ctx context.Context, contents []string) (ems []vecto
 	return
 }
 
-// Chat is not a streaming chatgpt call
+// Chat to openai chat api, and get the response
 func (oa *OpenAI) Chat(ctx context.Context, messages []ChatMessage) (result ChatMessage, err error) {
 	msgs := make([]openai.ChatCompletionMessage, len(messages))
 	for i, m := range messages {
