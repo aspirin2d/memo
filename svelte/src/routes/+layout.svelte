@@ -1,6 +1,6 @@
 <script>
 	import '../app.css';
-	import { Header, SideNav } from '$lib/components';
+	import { Header } from '$lib/components';
 	import { onMount } from 'svelte';
 	import { drawerToggled } from '$lib/store';
 
@@ -26,9 +26,7 @@
 <main>
 	<Header />
 	<div class="w-full h-16 min-h-[4rem]" />
-	<SideNav>
-		<slot />
-	</SideNav>
+	<slot />
 </main>
 
 <style lang="postcss">

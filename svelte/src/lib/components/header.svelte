@@ -1,7 +1,11 @@
+<script>
+	import { drawerToggled } from '$lib/store';
+</script>
+
 <div class="header">
 	<!-- header left -->
 	<div class="start">
-		<button>
+		<button on:click={() => ($drawerToggled = !$drawerToggled)}>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				fill="none"
