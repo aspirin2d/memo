@@ -1,13 +1,10 @@
 <script>
 	import InputArea from './input-area.svelte';
-	import TemplateBox from './template-box.svelte';
 </script>
 
 <div class="scroll-container">
 	<div class="chat-history-container">
-		<div class="chat-history-content">
-			<TemplateBox />
-		</div>
+		<div class="chat-history-content">Hello, World</div>
 	</div>
 </div>
 <div class="action-bar">

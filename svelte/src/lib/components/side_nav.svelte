@@ -4,20 +4,21 @@
 </script>
 
 <div class="sidenav-container {$drawerToggled === false ? 'sidenav-hidden' : ''}">
-	<div class="sidenav-drawer">
-		{#if $drawerToggled}
+	{#if $drawerToggled}
+		<div class="sidenav-drawer">
 			<button
 				class="sidenav-drawer-backdrop"
-				transition:fade
+				transition:fade={{ duration: 250 }}
 				on:click={() => {
+					console.log('clicked');
 					$drawerToggled = false;
 				}}
 			/>
-			<div class="sidenav-drawer-content" transition:fly={{ x: '-100%' }}>
+			<div class="sidenav-drawer-content" transition:fly={{ x: '-100%', duration: 250 }}>
 				<slot name="drawer" />
 			</div>
-		{/if}
-	</div>
+		</div>
+	{/if}
 	<div class="sidenav-content">
 		<slot name="content" />
 	</div>
@@ -34,7 +35,7 @@
 	}
 
 	.sidenav-drawer-content {
-		@apply absolute top-0 bottom-0 left-0 right-0 z-30 mr-16 sm:mr-0;
+		@apply absolute top-0 bottom-0 left-0 right-0 z-30 mr-16 sm:mr-0 bg-white;
 	}
 
 	.sidenav-container {
