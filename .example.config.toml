@@ -4,3 +4,28 @@ mongo_uri = "mongodb://localhost:27017/"
 mongo_db_name = "memo"
 
 qdrant_uri = "localhost:6334" # do not add http or https, cause it uses grpc protocol
+
+[templates]
+interference="""
+"{{.ShopName}}"是一家坐落在森林深处的茶馆，茶馆的主人名叫"{{.OwnerName}}"。
+森林里住着很多的性格各异的小动物，他们经常光顾茶馆并在那里结交新的朋友。
+{{range .Animals}}
+{{range .AnimalDesc}}{{.}}\n{{end}}
+{{if .Memories}}以下是关于{{.AnimalName}}和茶馆的记忆：
+{{range .Memories}}{{.}}\n{{end}}{{end}}{{end}}
+{{if eq .QueryType "order"}}{{template "order_query" .}}{{end}}
+""""
+
+order_query="""
+{{with $a:=index .Animals 0}}你的目标是扮演{{$a.AnimalName}}，对问题作出回应。
+请根据{{$a.AnimalName}}的性格设定、喜好以及他的记忆在下面的茶点里选择一款或两款茶点。
+{{range $i, $m := $.Menu}}{{$i}}. {{$m}}\n{{end}}
+{{$a.AnimalName}}会在吃完茶点后，和{{$.OwnerName}}说一句话。请用扮演{{$a.AnimalName}}，按照下面格式输出内容：
+({{$a.AnimalName}}选择茶点的序号，如果是多个则用","分割)
+({{$a.AnimalName}}的动作或者态度)
+({{$a.AnimalName}}喝完茶后会说的话)
+
+注意！不要有任何解释内容，只输出茶点序号、动作和罗杰会说的话。
+注意换行，输出内容不要带上括号。
+{{end}}
+"""

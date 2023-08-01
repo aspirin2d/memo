@@ -44,6 +44,8 @@ type Config struct {
 	AgentListLimit    int `toml:"agent_search_limit"`
 	MemorySearchLimit int `toml:"memory_search_limit"`
 	MemoryListLimit   int `toml:"memory_list_limit"`
+
+	Templates *Templates `toml:"templates"`
 }
 
 type Memo struct {
@@ -74,7 +76,15 @@ func FromConfig(config_path string) *Memo {
 	}
 
 	if conf.OpenAIAPIKey == "" {
-		panic("OpenAIAPIKey is empty")
+		panic("OpenAIAPIKey is undefined")
+	}
+
+	if conf.Templates == nil {
+		panic("Templates are undefined")
+	}
+
+	if err := conf.Templates.Parse(); err != nil {
+		panic("Templates parse error")
 	}
 
 	ctx := context.TODO()
@@ -83,7 +93,6 @@ func FromConfig(config_path string) *Memo {
 	if err != nil {
 		panic(err)
 	}
-
 	// qdrant
 	qc, err := grpc.Dial(conf.QdrantUri, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -109,8 +118,7 @@ func FromConfig(config_path string) *Memo {
 			SearchLimit: int64(conf.MemorySearchLimit),
 			ListLimit:   int64(conf.MemoryListLimit),
 		},
-
-		Config: &conf,
+		Config: &conf, // Config of the memo instance
 		Logger: logger.Sugar(),
 	}
 }
